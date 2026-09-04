@@ -2,8 +2,8 @@ import React from 'react';
 import { ActiveTab } from '../types';
 import { 
   Bot, 
-  Code2, 
-  Layers, 
+  Filter, 
+  LayoutTemplate, 
   ShieldAlert, 
   Palette, 
   BookOpen,
@@ -21,42 +21,79 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   serverStatus,
 }) => {
-  const navItems: { id: ActiveTab; label: string; icon: React.ReactNode; badge?: string }[] = [
-    { id: 'chat', label: 'LAYA Assistant', icon: <Bot className="w-4 h-4" />, badge: 'AI' },
-    { id: 'queryBuilder', label: 'Encoded Query', icon: <Code2 className="w-4 h-4" /> },
-    { id: 'widgetStudio', label: 'Portal Widget Studio', icon: <Layers className="w-4 h-4" /> },
-    { id: 'codeAuditor', label: 'Anti-Pattern Scanner', icon: <ShieldAlert className="w-4 h-4" /> },
-    { id: 'tokens', label: 'Horizon Tokens', icon: <Palette className="w-4 h-4" /> },
-    { id: 'apiRef', label: 'API Reference', icon: <BookOpen className="w-4 h-4" /> },
+  const tabs = [
+    { id: 'chat' as ActiveTab, label: 'LAYA Assistant', icon: Bot },
+    { id: 'queryBuilder' as ActiveTab, label: 'Encoded Query', icon: Filter },
+    { id: 'widgetStudio' as ActiveTab, label: 'Widget Studio', icon: LayoutTemplate },
+    { id: 'codeAuditor' as ActiveTab, label: 'Code Auditor', icon: ShieldAlert },
+    { id: 'tokens' as ActiveTab, label: 'Horizon Tokens', icon: Palette },
+    { id: 'apiRef' as ActiveTab, label: 'API Reference', icon: BookOpen },
   ];
 
   return (
-    <header className="sticky top-0 z-50 bg-[#032D42] text-white border-b border-[#0A3D56] shadow-md">
+    <header className="sticky top-0 z-30 bg-[#032D42] text-white shadow-md border-b border-teal-900/40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Brand Identity */}
+          {/* Logo & Title */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0080A3] to-[#00B589] flex items-center justify-center shadow-inner text-white font-bold text-lg tracking-wider border border-white/20">
-              L
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0080A3] to-teal-400 flex items-center justify-center text-white shadow-sm ring-2 ring-teal-500/20">
+              <Bot className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xl font-bold tracking-tight text-white font-mono">
+                <span className="font-extrabold text-lg tracking-tight text-white font-mono">
                   LAYA
                 </span>
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-[#0080A3]/30 border border-[#00B589]/40 text-[#00E5A3]">
-                  ServiceNow Specialist
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#0080A3] text-teal-100 tracking-wide uppercase">
+                  ServiceNow Dev
                 </span>
               </div>
-              <p className="text-[11px] text-slate-300 hidden sm:block">
-                Full-Stack Architecture & Development Studio
+              <p className="text-[11px] text-slate-300 font-medium">
+                Full-Stack Architecture & Studio
               </p>
             </div>
           </div>
 
-          {/* Status Indicator */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-900/60 border border-slate-700/60 text-xs">
+          {/* Navigation Items */}
+          <nav className="hidden md:flex items-center space-x-1 bg-slate-900/40 p-1 rounded-xl border border-white/10">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#0080A3] text-white shadow-sm'
+                      : 'text-slate-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Server Connection Status Badge */}
+          <div className="flex items-center gap-2 text-xs">
+            <div
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+                serverStatus === 'online'
+                  ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
+                  : serverStatus === 'connecting'
+                  ? 'bg-amber-950/60 text-amber-400 border-amber-500/30'
+                  : 'bg-rose-950/60 text-rose-400 border-rose-500/30'
+              }`}
+              title={
+                serverStatus === 'online'
+                  ? 'API is ready and connected to Gemini'
+                  : serverStatus === 'connecting'
+                  ? 'Connecting to backend...'
+                  : 'Server offline'
+              }
+            >
               <span
                 className={`w-2 h-2 rounded-full ${
                   serverStatus === 'online'
@@ -66,34 +103,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                     : 'bg-rose-400'
                 }`}
               />
-              <span className="text-slate-300 font-medium text-[11px]">
-                {serverStatus === 'online' ? 'Gemini Active' : serverStatus === 'connecting' ? 'Connecting' : 'Ready'}
-              </span>
+              <span className="capitalize">{serverStatus}</span>
             </div>
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex space-x-1 overflow-x-auto scrollbar-none py-1 border-t border-white/10">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
+        {/* Mobile Horizontal Tab Scroller */}
+        <div className="flex md:hidden overflow-x-auto py-2 gap-1 border-t border-white/10 scrollbar-none">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
             return (
               <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-md whitespace-nowrap transition-all duration-150 ${
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs whitespace-nowrap ${
                   isActive
-                    ? 'bg-[#0080A3] text-white shadow-sm font-semibold'
-                    : 'text-slate-300 hover:text-white hover:bg-white/10'
+                    ? 'bg-[#0080A3] text-white font-medium'
+                    : 'text-slate-300 hover:bg-white/5'
                 }`}
               >
-                {item.icon}
-                <span>{item.label}</span>
-                {item.badge && (
-                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-                    {item.badge}
-                  </span>
-                )}
+                <Icon className="w-3.5 h-3.5" />
+                <span>{tab.label}</span>
               </button>
             );
           })}

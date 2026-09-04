@@ -77,8 +77,9 @@ async function generateWithFallback(
         errMsg.includes("high demand") ||
         errMsg.includes("UNAVAILABLE");
 
-      console.log(`[AI Router] Model ${model} unavailable (${isHighDemand ? 'high demand' : 'transient'}). Trying fallback candidate...`);
-      // Instant failover to the next candidate model
+      console.log(
+        `[AI Router] Model ${model} unavailable (${isHighDemand ? "high demand" : "transient"}). Trying fallback candidate...`
+      );
       continue;
     }
   }
