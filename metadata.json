@@ -1,0 +1,7 @@
+{
+  "name": "LAYA - ServiceNow AI Assistant",
+  "description": "Expert ServiceNow full-stack development assistant and developer studio for backend, frontend, Service Portal, and platform architecture.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
