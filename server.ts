@@ -4,6 +4,13 @@ import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import { LAYA_SYSTEM_INSTRUCTION } from "./server/prompt";
+import {
+  getActiveConfig,
+  updateActiveConfig,
+  disconnectActiveConfig,
+  pingAndCheckStatus,
+  queryTableRecords,
+} from "./server/servicenow";
 
 dotenv.config();
 
@@ -34,11 +41,87 @@ function getAIClient(): GoogleGenAI {
 
 // API Routes
 app.get("/api/health", (req, res) => {
+  const snConfig = getActiveConfig();
   res.json({
     status: "ok",
     hasApiKey: Boolean(process.env.GEMINI_API_KEY),
     name: "LAYA ServiceNow Assistant",
+    instanceUrl: snConfig.instanceUrl,
+    hasInstanceCredentials: Boolean(snConfig.token || (snConfig.username && snConfig.password)),
   });
+});
+
+// ServiceNow Instance Connection Endpoints
+app.get("/api/servicenow/status", async (req, res) => {
+  try {
+    const status = await pingAndCheckStatus();
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({
+      error: err?.message || "Failed to check instance status",
+    });
+  }
+});
+
+app.post("/api/servicenow/connect", async (req, res) => {
+  try {
+    const { instanceUrl, username, password, token } = req.body;
+    updateActiveConfig({ instanceUrl, username, password, token });
+    const status = await pingAndCheckStatus();
+    res.json(status);
+  } catch (err: any) {
+    res.status(500).json({
+      error: err?.message || "Failed to connect to ServiceNow instance",
+    });
+  }
+});
+
+app.post("/api/servicenow/disconnect", (req, res) => {
+  disconnectActiveConfig();
+  res.json({ success: true, message: "Disconnected instance credentials." });
+});
+
+app.get("/api/servicenow/records", async (req, res) => {
+  try {
+    const table = (req.query.table as string) || "incident";
+    const query = (req.query.query as string) || "";
+    const limit = Number(req.query.limit) || 20;
+    const fields = (req.query.fields as string) || "";
+    const displayValue = (req.query.display_value as string) || "true";
+
+    const result = await queryTableRecords({
+      table,
+      query,
+      limit,
+      fields,
+      displayValue,
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || "Failed to query records from ServiceNow",
+    });
+  }
+});
+
+app.post("/api/servicenow/execute-query", async (req, res) => {
+  try {
+    const { table = "incident", query = "", limit = 20, fields = "" } = req.body;
+    const result = await queryTableRecords({
+      table,
+      query,
+      limit: Number(limit) || 20,
+      fields,
+      displayValue: "true",
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || "Failed to execute query",
+    });
+  }
 });
 
 const CANDIDATE_MODELS = [
@@ -113,10 +196,13 @@ In the meantime, you can explore the built-in **ServiceNow Developer Studio** ta
       parts: [{ text: m.content }],
     }));
 
+    const snConfig = getActiveConfig();
+    const instanceContext = `\n\n# ACTIVE INSTANCE CONTEXT\nTarget ServiceNow Instance: ${snConfig.instanceUrl}\nConfigured Username: ${snConfig.username || 'admin'}\nHas Credentials Configured: ${Boolean(snConfig.token || (snConfig.username && snConfig.password))}\nWhen the user asks to connect or interact with their instance ${snConfig.instanceUrl}, reference this specific instance URL, explain how to authenticate or wake up hibernating developer instances from developer.servicenow.com, and guide them on Table API and ServiceNow integration best practices.`;
+
     const { text, modelUsed } = await generateWithFallback(
       ai,
       contents,
-      LAYA_SYSTEM_INSTRUCTION
+      LAYA_SYSTEM_INSTRUCTION + instanceContext
     );
 
     return res.json({ reply: text, modelUsed });

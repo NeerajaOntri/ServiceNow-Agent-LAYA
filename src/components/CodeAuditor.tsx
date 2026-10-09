@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ShieldAlert, 
   CheckCircle2, 
@@ -28,10 +28,20 @@ const SAMPLE_BAD_SNIPPET = `(function executeRule(current, previous /*null when 
   }
 })(current, previous);`;
 
-export const CodeAuditor: React.FC = () => {
-  const [code, setCode] = useState(SAMPLE_BAD_SNIPPET);
+interface CodeAuditorProps {
+  initialScript?: string;
+}
+
+export const CodeAuditor: React.FC<CodeAuditorProps> = ({ initialScript }) => {
+  const [code, setCode] = useState(initialScript || SAMPLE_BAD_SNIPPET);
   const [issues, setIssues] = useState<DetectedIssue[]>([]);
   const [hasScanned, setHasScanned] = useState(false);
+
+  useEffect(() => {
+    if (initialScript) {
+      setCode(initialScript);
+    }
+  }, [initialScript]);
 
   const runAudit = () => {
     const found: DetectedIssue[] = [];

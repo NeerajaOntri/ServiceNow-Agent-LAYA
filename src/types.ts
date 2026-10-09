@@ -9,7 +9,29 @@ export interface ChatMessage {
   modelUsed?: string;
 }
 
-export type ActiveTab = 'chat' | 'queryBuilder' | 'widgetStudio' | 'codeAuditor' | 'tokens' | 'apiRef';
+export type ActiveTab = 'chat' | 'instance' | 'queryBuilder' | 'widgetStudio' | 'codeAuditor' | 'tokens' | 'apiRef';
+
+export interface InstanceStatus {
+  instanceUrl: string;
+  isReachable: boolean;
+  isAuthenticated: boolean;
+  hasCredentials: boolean;
+  pingMs?: number;
+  statusCode?: number;
+  userName?: string;
+  userRoles?: string[];
+  errorMessage?: string;
+  errorDetail?: string;
+  passwordNeedsReset?: boolean;
+  isHibernating?: boolean;
+  lastChecked?: string;
+  authMethod?: 'basic' | 'token' | 'none';
+}
+
+export interface TableRecord {
+  sys_id: string;
+  [key: string]: any;
+}
 
 export interface QueryCondition {
   id: string;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActiveTab } from '../types';
+import { ActiveTab, InstanceStatus } from '../types';
 import { 
   Bot, 
   Filter, 
@@ -7,22 +7,30 @@ import {
   ShieldAlert, 
   Palette, 
   BookOpen,
-  Sparkles
+  Server,
+  ExternalLink
 } from 'lucide-react';
 
 interface NavbarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   serverStatus: 'online' | 'connecting' | 'offline';
+  instanceStatus: InstanceStatus | null;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
   serverStatus,
+  instanceStatus,
 }) => {
+  const shortInstanceName = instanceStatus?.instanceUrl
+    ? instanceStatus.instanceUrl.replace(/^https?:\/\//, '').replace('.service-now.com', '').replace(/\/$/, '')
+    : 'dev213909';
+
   const tabs = [
     { id: 'chat' as ActiveTab, label: 'LAYA Assistant', icon: Bot },
+    { id: 'instance' as ActiveTab, label: `Instance (${shortInstanceName})`, icon: Server, badge: instanceStatus?.isAuthenticated ? 'LIVE' : instanceStatus?.isReachable ? 'ONLINE' : undefined },
     { id: 'queryBuilder' as ActiveTab, label: 'Encoded Query', icon: Filter },
     { id: 'widgetStudio' as ActiveTab, label: 'Widget Studio', icon: LayoutTemplate },
     { id: 'codeAuditor' as ActiveTab, label: 'Code Auditor', icon: ShieldAlert },
@@ -55,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Navigation Items */}
-          <nav className="hidden md:flex items-center space-x-1 bg-slate-900/40 p-1 rounded-xl border border-white/10">
+          <nav className="hidden lg:flex items-center space-x-1 bg-slate-900/40 p-1 rounded-xl border border-white/10">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -63,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer relative ${
                     isActive
                       ? 'bg-[#0080A3] text-white shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -71,15 +79,51 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span
+                      className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                        tab.badge === 'LIVE'
+                          ? 'bg-emerald-500 text-white animate-pulse'
+                          : 'bg-teal-500/30 text-teal-200'
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </nav>
 
-          {/* Server Connection Status Badge */}
-          <div className="flex items-center gap-2 text-xs">
+          {/* Right Status Indicators: Instance & Server */}
+          <div className="flex items-center gap-2.5 text-xs">
+            {/* Instance Quick Pill */}
+            <button
+              onClick={() => setActiveTab('instance')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all cursor-pointer ${
+                instanceStatus?.isAuthenticated
+                  ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/80'
+                  : instanceStatus?.isReachable
+                  ? 'bg-teal-950/60 text-teal-300 border-teal-500/30 hover:bg-teal-900/60'
+                  : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+              }`}
+              title={`ServiceNow Instance: ${instanceStatus?.instanceUrl || 'https://dev213909.service-now.com'}`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  instanceStatus?.isAuthenticated
+                    ? 'bg-emerald-400 animate-pulse'
+                    : instanceStatus?.isReachable
+                    ? 'bg-amber-400'
+                    : 'bg-slate-400'
+                }`}
+              />
+              <span className="font-mono">{shortInstanceName}</span>
+            </button>
+
+            {/* AI Assistant Server Badge */}
             <div
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+              className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
                 serverStatus === 'online'
                   ? 'bg-emerald-950/60 text-emerald-400 border-emerald-500/30'
                   : serverStatus === 'connecting'
@@ -88,16 +132,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
               title={
                 serverStatus === 'online'
-                  ? 'API is ready and connected to Gemini'
+                  ? 'AI Engine Online'
                   : serverStatus === 'connecting'
                   ? 'Connecting to backend...'
                   : 'Server offline'
               }
             >
               <span
-                className={`w-2 h-2 rounded-full ${
+                className={`w-1.5 h-1.5 rounded-full ${
                   serverStatus === 'online'
-                    ? 'bg-emerald-400 animate-pulse'
+                    ? 'bg-emerald-400'
                     : serverStatus === 'connecting'
                     ? 'bg-amber-400'
                     : 'bg-rose-400'
@@ -109,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
 
         {/* Mobile Horizontal Tab Scroller */}
-        <div className="flex md:hidden overflow-x-auto py-2 gap-1 border-t border-white/10 scrollbar-none">
+        <div className="flex lg:hidden overflow-x-auto py-2 gap-1 border-t border-white/10 scrollbar-none">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -133,3 +177,4 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
+

@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Layers
 } from 'lucide-react';
-import { ChatMessage } from '../types';
+import { ChatMessage, InstanceStatus } from '../types';
 import { STARTER_PROMPTS } from '../data/servicenowData';
 
 interface ChatViewProps {
@@ -21,6 +21,8 @@ interface ChatViewProps {
   onSendMessage: (content: string) => void;
   isLoading: boolean;
   onRetry: () => void;
+  instanceStatus?: InstanceStatus | null;
+  onNavigateToInstance?: () => void;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -28,6 +30,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onSendMessage,
   isLoading,
   onRetry,
+  instanceStatus,
+  onNavigateToInstance,
 }) => {
   const [input, setInput] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -53,7 +57,49 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const hasMessages = messages.length > 0;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4.25rem)] max-w-5xl mx-auto px-4 py-4">
+    <div className="flex flex-col h-[calc(100vh-4.25rem)] max-w-5xl mx-auto px-4 py-4 space-y-2">
+      {/* Target Instance Indicator Bar */}
+      <div className="bg-white/80 backdrop-blur-xs border border-slate-200/80 rounded-xl px-4 py-2 flex items-center justify-between text-xs">
+        <div className="flex items-center gap-2">
+          <span
+            className={`w-2 h-2 rounded-full ${
+              instanceStatus?.isAuthenticated
+                ? 'bg-emerald-500 animate-pulse'
+                : instanceStatus?.isReachable
+                ? 'bg-amber-400'
+                : 'bg-slate-400'
+            }`}
+          />
+          <span className="text-slate-500 font-medium">Target Instance:</span>
+          <span className="font-mono font-bold text-teal-800">
+            {instanceStatus?.instanceUrl || 'https://dev213909.service-now.com'}
+          </span>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              instanceStatus?.isAuthenticated
+                ? 'bg-emerald-100 text-emerald-800'
+                : instanceStatus?.isReachable
+                ? 'bg-sky-100 text-sky-800'
+                : 'bg-slate-100 text-slate-600'
+            }`}
+          >
+            {instanceStatus?.isAuthenticated
+              ? 'Connected (Table API)'
+              : instanceStatus?.isReachable
+              ? 'Online (Needs Credentials)'
+              : 'Checking...'}
+          </span>
+        </div>
+        {onNavigateToInstance && (
+          <button
+            onClick={onNavigateToInstance}
+            className="text-[#0080A3] hover:underline font-semibold text-[11px] cursor-pointer"
+          >
+            Manage Connection →
+          </button>
+        )}
+      </div>
+
       {/* Main Chat Scroll Container */}
       <div className="flex-1 overflow-y-auto space-y-4 pr-1 rounded-2xl bg-white p-6 shadow-sm border border-slate-200/80">
         {!hasMessages ? (
