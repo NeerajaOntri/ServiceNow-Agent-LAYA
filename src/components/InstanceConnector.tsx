@@ -873,22 +873,42 @@ export const InstanceConnector: React.FC<InstanceConnectorProps> = ({
 
                 <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-96 overflow-y-auto">
                   {records.map((rec, idx) => {
-                    const primaryField =
+                    const renderFieldSafe = (val: any): string => {
+                      if (val === null || val === undefined) return '';
+                      if (typeof val === 'object') {
+                        if ('display_value' in val) return String(val.display_value);
+                        if ('value' in val) return String(val.value);
+                        if ('state' in val) return String(val.state);
+                        if ('name' in val) return String(val.name);
+                        return JSON.stringify(val);
+                      }
+                      return String(val);
+                    };
+
+                    const rawPrimary =
                       rec.number ||
                       rec.name ||
                       rec.short_description ||
                       rec.user_name ||
                       rec.sys_id;
-                    const secondaryField =
+                    const primaryField = renderFieldSafe(rawPrimary);
+
+                    const rawSecondary =
                       rec.short_description ||
                       rec.description ||
                       rec.email ||
                       rec.title ||
                       rec.state;
+                    const secondaryField = renderFieldSafe(rawSecondary);
+
+                    const sysIdStr = renderFieldSafe(rec.sys_id);
+                    const stateStr = rec.state ? renderFieldSafe(rec.state) : '';
+                    const priorityStr = rec.priority ? renderFieldSafe(rec.priority) : '';
+                    const createdStr = rec.sys_created_on ? renderFieldSafe(rec.sys_created_on) : '';
 
                     return (
                       <div
-                        key={rec.sys_id || idx}
+                        key={sysIdStr || idx}
                         className="p-3 bg-white hover:bg-slate-50 transition-colors flex items-center justify-between gap-4"
                       >
                         <div className="min-w-0 flex-1">
@@ -896,14 +916,14 @@ export const InstanceConnector: React.FC<InstanceConnectorProps> = ({
                             <span className="font-mono text-xs font-bold text-[#0080A3]">
                               {primaryField}
                             </span>
-                            {rec.priority && (
+                            {priorityStr && (
                               <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">
-                                P{rec.priority}
+                                P{priorityStr}
                               </span>
                             )}
-                            {rec.state && (
+                            {stateStr && (
                               <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-slate-100 text-slate-600">
-                                {rec.state}
+                                {stateStr}
                               </span>
                             )}
                           </div>
@@ -913,9 +933,9 @@ export const InstanceConnector: React.FC<InstanceConnectorProps> = ({
                             </p>
                           )}
                           <div className="flex items-center gap-3 text-[10px] text-slate-400 mt-1 font-mono">
-                            <span>sys_id: {rec.sys_id?.slice(0, 12)}...</span>
-                            {rec.sys_created_on && (
-                              <span>Created: {rec.sys_created_on}</span>
+                            <span>sys_id: {sysIdStr.slice(0, 12)}...</span>
+                            {createdStr && (
+                              <span>Created: {createdStr}</span>
                             )}
                           </div>
                         </div>
@@ -974,10 +994,10 @@ export const InstanceConnector: React.FC<InstanceConnectorProps> = ({
               <div>
                 <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
                   <Database className="w-4 h-4 text-[#0080A3]" />
-                  <span>Record Details: {selectedRecord.number || selectedRecord.name || selectedRecord.sys_id}</span>
+                  <span>Record Details: {String(selectedRecord.number?.display_value || selectedRecord.number || selectedRecord.name || selectedRecord.sys_id || 'Record')}</span>
                 </h3>
                 <p className="text-[11px] text-slate-400 font-mono">
-                  sys_id: {selectedRecord.sys_id}
+                  sys_id: {String(selectedRecord.sys_id || '')}
                 </p>
               </div>
               <button

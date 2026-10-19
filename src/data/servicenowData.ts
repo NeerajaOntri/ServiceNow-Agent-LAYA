@@ -6,6 +6,31 @@ import {
 
 export const STARTER_PROMPTS = [
   {
+    category: 'Flow Designer & Workflows',
+    title: 'Flow Designer VIP Incident & Decision Table',
+    prompt: 'How do I build a ServiceNow Flow Designer flow triggered on P1 incidents that executes a Decision Table (sys_decision) for dynamic approval routing, asks for approval, and creates an incident task?',
+  },
+  {
+    category: 'Decision Tables & Approvals',
+    title: 'sys_decision Table API & Scripting',
+    prompt: 'Show me how to call sn_fd.DecisionTableAPI.getDecision() in a server script to evaluate multi-condition cost and department thresholds into an approval group result.',
+  },
+  {
+    category: 'Email Notifications',
+    title: 'sysevent_email_action & HTML Styling',
+    prompt: 'How do I configure a ServiceNow Outbound Email Notification with responsive inline CSS tables, dynamic variables like ${number} and ${assigned_to}, and 1-click mailto approval buttons?',
+  },
+  {
+    category: 'Service Catalog & Portal',
+    title: 'Catalog Item with Dynamic UI Policies',
+    prompt: 'How do I configure a Service Catalog Item (sc_cat_item) with variable sets and Catalog UI Policies that show/hide fields dynamically and make them mandatory upon checkbox toggle?',
+  },
+  {
+    category: 'Update Sets & Releases',
+    title: 'Merge Update Sets & Resolve Collisions',
+    prompt: 'What is the recommended best practice for merging multiple developer update sets into a single sprint release package, detecting target_name collision conflicts, and committing safely?',
+  },
+  {
     category: 'Backend Scripting',
     title: 'GlideAjax Script Include & Client Script',
     prompt: 'How do I build an asynchronous GlideAjax Script Include and an onChange Client Script to fetch user department, manager, and email without freezing the browser?',
@@ -19,11 +44,6 @@ export const STARTER_PROMPTS = [
     category: 'Service Portal',
     title: 'Build a Complete Portal Widget',
     prompt: 'Create a Service Portal widget with Server Script, Client Controller, HTML Template, and CSS that displays the logged-in user’s open incidents with a 1-click status update action.',
-  },
-  {
-    category: 'Security & Access Control',
-    title: 'Secure Scoped App ACLs',
-    prompt: 'How should I design table-level (*, none) and field-level ACLs for a custom scoped application to ensure proper role segregation and security compliance?',
   },
 ];
 

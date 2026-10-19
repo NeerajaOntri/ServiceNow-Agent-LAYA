@@ -7,6 +7,11 @@ import { WidgetStudio } from './components/WidgetStudio';
 import { CodeAuditor } from './components/CodeAuditor';
 import { TokensInspector } from './components/TokensInspector';
 import { ApiReference } from './components/ApiReference';
+import { FlowDesignerBuilder } from './components/FlowDesignerBuilder';
+import { DecisionTableEngine } from './components/DecisionTableEngine';
+import { EmailNotificationStudio } from './components/EmailNotificationStudio';
+import { CatalogItemStudio } from './components/CatalogItemStudio';
+import { UpdateSetManager } from './components/UpdateSetManager';
 import { ActiveTab, ChatMessage, InstanceStatus } from './types';
 
 export function App() {
@@ -163,6 +168,24 @@ export function App() {
             onOpenQueryInBuilder={handleOpenQueryInBuilder}
             onAuditScript={handleAuditScript}
           />
+        )}
+        {activeTab === 'flowDesigner' && (
+          <FlowDesignerBuilder
+            onNavigateToDecisionTables={() => setActiveTab('decisionTables')}
+            onAuditScript={handleAuditScript}
+          />
+        )}
+        {activeTab === 'decisionTables' && (
+          <DecisionTableEngine onAuditScript={handleAuditScript} />
+        )}
+        {activeTab === 'emailNotifications' && (
+          <EmailNotificationStudio onAuditScript={handleAuditScript} />
+        )}
+        {activeTab === 'catalogStudio' && (
+          <CatalogItemStudio onAuditScript={handleAuditScript} />
+        )}
+        {activeTab === 'updateSetManager' && (
+          <UpdateSetManager onAuditScript={handleAuditScript} />
         )}
         {activeTab === 'queryBuilder' && (
           <QueryBuilder

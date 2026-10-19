@@ -408,28 +408,40 @@ while (gr.next()) {
             </div>
           ) : (
             <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 max-h-72 overflow-y-auto">
-              {liveResults?.map((rec, i) => (
-                <div key={rec.sys_id || i} className="p-3 bg-white hover:bg-slate-50 text-xs flex items-center justify-between">
-                  <div>
-                    <span className="font-mono font-bold text-[#0080A3] mr-2">
-                      {rec.number || rec.name || rec.short_description || rec.sys_id}
-                    </span>
-                    {rec.short_description && (
-                      <span className="text-slate-600 truncate">{rec.short_description}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {rec.priority && (
-                      <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">
-                        P{rec.priority}
+              {liveResults?.map((rec, i) => {
+                const getStr = (v: any) => {
+                  if (v === null || v === undefined) return '';
+                  if (typeof v === 'object') return v.display_value || v.value || v.name || JSON.stringify(v);
+                  return String(v);
+                };
+                const primary = getStr(rec.number || rec.name || rec.short_description || rec.sys_id);
+                const desc = rec.short_description ? getStr(rec.short_description) : '';
+                const priority = rec.priority ? getStr(rec.priority) : '';
+                const sysId = getStr(rec.sys_id);
+
+                return (
+                  <div key={sysId || i} className="p-3 bg-white hover:bg-slate-50 text-xs flex items-center justify-between">
+                    <div>
+                      <span className="font-mono font-bold text-[#0080A3] mr-2">
+                        {primary}
                       </span>
-                    )}
-                    <span className="font-mono text-[10px] text-slate-400">
-                      sys_id: {rec.sys_id?.slice(0, 8)}...
-                    </span>
+                      {desc && (
+                        <span className="text-slate-600 truncate">{desc}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {priority && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold">
+                          P{priority}
+                        </span>
+                      )}
+                      <span className="font-mono text-[10px] text-slate-400">
+                        sys_id: {sysId.slice(0, 8)}...
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

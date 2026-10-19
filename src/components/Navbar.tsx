@@ -8,7 +8,12 @@ import {
   Palette, 
   BookOpen,
   Server,
-  ExternalLink
+  ExternalLink,
+  GitMerge,
+  TableProperties,
+  Mail,
+  ShoppingBag,
+  GitPullRequest
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -31,6 +36,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const tabs = [
     { id: 'chat' as ActiveTab, label: 'LAYA Assistant', icon: Bot },
     { id: 'instance' as ActiveTab, label: `Instance (${shortInstanceName})`, icon: Server, badge: instanceStatus?.isAuthenticated ? 'LIVE' : instanceStatus?.isReachable ? 'ONLINE' : undefined },
+    { id: 'flowDesigner' as ActiveTab, label: 'Flow Designer', icon: GitMerge, badge: 'NEW' },
+    { id: 'decisionTables' as ActiveTab, label: 'Decision Tables', icon: TableProperties, badge: 'NEW' },
+    { id: 'emailNotifications' as ActiveTab, label: 'Email Studio', icon: Mail, badge: 'NEW' },
+    { id: 'catalogStudio' as ActiveTab, label: 'Catalog Studio', icon: ShoppingBag, badge: 'NEW' },
+    { id: 'updateSetManager' as ActiveTab, label: 'Update Sets', icon: GitPullRequest, badge: 'NEW' },
     { id: 'queryBuilder' as ActiveTab, label: 'Encoded Query', icon: Filter },
     { id: 'widgetStudio' as ActiveTab, label: 'Widget Studio', icon: LayoutTemplate },
     { id: 'codeAuditor' as ActiveTab, label: 'Code Auditor', icon: ShieldAlert },
@@ -63,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Navigation Items */}
-          <nav className="hidden lg:flex items-center space-x-1 bg-slate-900/40 p-1 rounded-xl border border-white/10">
+          <nav className="hidden lg:flex items-center space-x-1 bg-slate-900/40 p-1 rounded-xl border border-white/10 overflow-x-auto max-w-[65vw] scrollbar-none">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -71,19 +81,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer relative ${
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer shrink-0 relative ${
                     isActive
                       ? 'bg-[#0080A3] text-white shadow-sm'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                  <span>{tab.label}</span>
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="whitespace-nowrap">{tab.label}</span>
                   {tab.badge && (
                     <span
-                      className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded-full ${
+                      className={`text-[8px] font-extrabold px-1.5 py-0.2 rounded-full ${
                         tab.badge === 'LIVE'
                           ? 'bg-emerald-500 text-white animate-pulse'
+                          : tab.badge === 'NEW'
+                          ? 'bg-amber-400 text-slate-950 font-black'
                           : 'bg-teal-500/30 text-teal-200'
                       }`}
                     >

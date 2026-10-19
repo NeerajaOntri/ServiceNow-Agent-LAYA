@@ -45,20 +45,35 @@ pages, service portal widgets, and workspaces — not generic web apps.
 - Roles (sys_user_role): custom app roles (e.g. x_myapp.user, x_myapp.admin), containment, security_admin
 - Contextual Security: ALWAYS prefer GlideRecordSecure over GlideRecord in user contexts
 
-### 4. Workflow & Automation
-- Flow Designer (sys_hub_flow): triggers, actions, flow logic (if/else, for-each, wait), subflows, stages, data pills
-- Playbooks: guided multi-lane workflows for Agent Workspace
-- Assignment Rules (sys_assignment_rule), SLAs (contract_sla), Inbound Email Actions, Notifications (sysevent_email_action), Events (gs.eventQueue)
+### 4. Workflow & Flow Designer Automation
+- Flow Designer (sys_hub_flow): Triggers (Record Created/Updated, Scheduled, REST/Inbound API, Service Catalog), Actions (Create/Update Record, Ask for Approval, Send Email, Create Task), Flow Logic (If/Else, For Each, Wait for Condition), Subflows, and Data Pills (e.g. fd_data.trigger.current).
+- Executing Flows from Script: Always use \`sn_fd.FlowAPI.getRunner().flow('scope.flow_name').withInputs({...}).run()\` or in async background via \`.inBackground().run()\`.
+- Subflows (sys_hub_subflow): Modular parameter-driven subroutines accepting specific inputs and returning typed outputs for reuse across multiple parent flows.
 
-### 5. Integrations
-- REST Messages (sys_rest_message): outbound REST calls, headers, authentication profiles, MID Server routing
-- Scripted REST APIs (sys_ws_definition): custom inbound REST endpoints, request/response scripting, ACL security
-- Import Sets & Transform Maps: staging tables, coalesce fields, transform scripts
-- Connection & Credential Aliases (sys_alias): secure credentials management (never hardcode!)
+### 5. Decision Tables & Approval Engine (sys_decision)
+- Decision Tables (sys_decision): Decouple complex business rules and multi-level approval hierarchies from code into condition-based decision matrixes.
+- Decision Questions & Answers (sys_decision_question): Condition rows evaluated in order of sequence. The first matching condition yields the output answer record.
+- Scripting Decision Tables: Invoke via \`sn_fd.DecisionTableAPI.getDecision('sys_id_or_name', inputsMap)\` returning the decision answer GlideRecord.
+- Approval Rules: Dynamically resolve approval groups (e.g., Cost > $10k -> VP Approval, Cost > $50k -> Board Approval) directly into Flow Designer 'Ask for Approval' actions.
 
-### 6. Service Catalog
-- Catalog Items (sc_cat_item), Record Producers (sc_cat_item_producer) with mapToField
-- Variables, Variable Sets, Catalog UI Policies, Catalog Client Scripts
+### 6. Outbound Email Notifications (sysevent_email_action)
+- Notification Architecture: Table targeting, trigger types (Record Insert/Update vs. gs.eventQueue event firing), and recipient resolution (assigned_to, caller_id, watch_list, event parm1/parm2).
+- Dynamic Variables: Incorporate \${number}, \${short_description}, \${priority}, \${assigned_to}, \${URI_REF}, and email notification mail scripts \${mail_script:script_name}.
+- Professional HTML & CSS: Responsive inline CSS with branded headers, priority severity badges, structured metadata key-value tables, and 1-click mailto approval buttons.
+
+### 7. Service Catalog & Service Portal (sc_cat_item & /sp)
+- Catalog Items (sc_cat_item) & Record Producers (sc_cat_item_producer): User-friendly request forms with categories, delivery times, pricing, and fulfillment workflows.
+- Variables (item_option_new): Single-line text, Multi-line, Select Box with choices, Reference (sys_user, cmdb_ci, cmn_department), Checkbox, Date/Time, and Variable Sets.
+- Catalog UI Policies & Client Scripts: Client-side dynamic interactivity (e.g., conditionally showing fields, setting mandatory states, or validating selections via g_form).
+- Service Portal Preview (/sp?id=sc_cat_item): Responsive portal layout with breadcrumbs, order summary, cart/checkout simulation, and variable set grouping.
+
+### 8. Update Set Merger & Deployment Management (sys_update_set & sys_update_xml)
+- Update Sets (sys_update_set): Moving configurations safely between Dev, Test, and Production instances.
+- Customer Updates (sys_update_xml): Detailed payload records tracking changes by type (sys_script, sys_ui_action, etc.) and target_name.
+- Collision Detection: Identifying when multiple developer update sets modify the identical target artifact (same type and target_name) and resolving order/winner payloads before committing.
+- Release Packaging: Merging sprint update sets into a single consolidated release package using GlideUpdateSetMerger or scripted batching.
+
+### 9. Integrations & REST APIs
 
 ---
 
