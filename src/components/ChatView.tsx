@@ -11,10 +11,30 @@ import {
   AlertCircle,
   Terminal,
   ShieldCheck,
-  Layers
+  Layers,
+  Workflow,
+  UserPlus,
+  ChevronDown,
+  CheckCircle2
 } from 'lucide-react';
-import { ChatMessage, InstanceStatus } from '../types';
-import { STARTER_PROMPTS } from '../data/servicenowData';
+import { ChatMessage, InstanceStatus, TeamMember, IndividualUpdateSet } from '../types';
+import { LiveDeploymentCard } from './LiveDeploymentCard';
+import { JiraSyncCard } from './JiraSyncCard';
+
+const QUICK_PILLS = [
+  {
+    label: '⚡ User Management',
+    prompt: 'Onboard new employee Jordan Vance with engineering email',
+  },
+  {
+    label: '⚡ Emergency Change',
+    prompt: 'Create an emergency change request for outage patch on core switch',
+  },
+  {
+    label: '⚡ Script Includes & Automation',
+    prompt: 'Create a Script Include ServerUtils extending AbstractAjaxProcessor',
+  },
+];
 
 interface ChatViewProps {
   messages: ChatMessage[];
@@ -23,6 +43,12 @@ interface ChatViewProps {
   onRetry: () => void;
   instanceStatus?: InstanceStatus | null;
   onNavigateToInstance?: () => void;
+  onClearMessages?: () => void;
+  activeDeveloper?: TeamMember;
+  onSelectDeveloper?: (member: TeamMember) => void;
+  teamMembers?: TeamMember[];
+  onToggleActiveSetState?: () => void;
+  onOpenAddDevModal?: () => void;
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({
@@ -32,6 +58,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
   onRetry,
   instanceStatus,
   onNavigateToInstance,
+  onClearMessages,
+  activeDeveloper,
+  onSelectDeveloper,
+  teamMembers,
+  onToggleActiveSetState,
+  onOpenAddDevModal,
 }) => {
   const [input, setInput] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -58,101 +90,141 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   return (
     <div className="flex flex-col h-[calc(100vh-4.25rem)] max-w-5xl mx-auto px-4 py-4 space-y-2">
-      {/* Target Instance Indicator Bar */}
-      <div className="bg-white/80 backdrop-blur-xs border border-slate-200/80 rounded-xl px-4 py-2 flex items-center justify-between text-xs">
-        <div className="flex items-center gap-2">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              instanceStatus?.isAuthenticated
-                ? 'bg-emerald-500 animate-pulse'
-                : instanceStatus?.isReachable
-                ? 'bg-amber-400'
-                : 'bg-slate-400'
-            }`}
-          />
-          <span className="text-slate-500 font-medium">Target Instance:</span>
-          <span className="font-mono font-bold text-teal-800">
-            {instanceStatus?.instanceUrl || 'https://dev213909.service-now.com'}
-          </span>
-          <span
-            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-              instanceStatus?.isAuthenticated
-                ? 'bg-emerald-100 text-emerald-800'
-                : instanceStatus?.isReachable
-                ? 'bg-sky-100 text-sky-800'
-                : 'bg-slate-100 text-slate-600'
-            }`}
-          >
-            {instanceStatus?.isAuthenticated
-              ? 'Connected (Table API)'
-              : instanceStatus?.isReachable
-              ? 'Online (Needs Credentials)'
-              : 'Checking...'}
-          </span>
+      {/* Top Status Bar: ServiceNow (dev442469) | Active Persona | Jira Workspace: CONNECTED */}
+      <div className="bg-white/95 backdrop-blur-xs border border-slate-200/90 rounded-xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* ServiceNow dev442469 */}
+          <div className="flex items-center gap-1.5 font-medium text-slate-700">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                instanceStatus?.isAuthenticated
+                  ? 'bg-emerald-500 animate-pulse'
+                  : instanceStatus?.isReachable
+                  ? 'bg-amber-400'
+                  : 'bg-emerald-500'
+              }`}
+            />
+            <span className="font-bold text-slate-800">dev442469</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+              {instanceStatus?.isAuthenticated ? 'ONLINE (Table API)' : 'ONLINE'}
+            </span>
+          </div>
+
+          <span className="text-slate-300 font-light">|</span>
+
+          {/* Active Developer Persona Dropdown & Container */}
+          {activeDeveloper && teamMembers && (
+            <div className="flex items-center gap-1.5 bg-slate-100/90 hover:bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 transition-colors">
+              <div className={`w-4 h-4 rounded-full ${activeDeveloper.avatarColor || 'bg-teal-600'} text-white flex items-center justify-center font-bold text-[8px]`}>
+                {activeDeveloper.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+              </div>
+              <span className="text-[11px] font-semibold text-slate-600 hidden sm:inline">Persona:</span>
+              <select
+                value={activeDeveloper.id}
+                onChange={(e) => {
+                  const target = teamMembers.find(m => m.id === e.target.value);
+                  if (target && onSelectDeveloper) {
+                    onSelectDeveloper(target);
+                  }
+                }}
+                className="bg-transparent text-slate-900 font-bold text-xs focus:outline-none cursor-pointer"
+                title="Switch active developer persona"
+              >
+                {teamMembers.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.personaCode || 'Dev'}: {m.name} ({m.role.split(' ')[0]})
+                  </option>
+                ))}
+              </select>
+
+              {onToggleActiveSetState && (
+                <button
+                  type="button"
+                  onClick={onToggleActiveSetState}
+                  className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-bold border transition-colors cursor-pointer ${
+                    activeDeveloper.state === 'Complete'
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      : 'bg-amber-100 text-amber-800 border-amber-300'
+                  }`}
+                  title="Toggle sys_update_set.state"
+                >
+                  {activeDeveloper.state === 'Complete' ? '✓ Complete' : '● In Prog'}
+                </button>
+              )}
+
+              {onOpenAddDevModal && (
+                <button
+                  type="button"
+                  onClick={onOpenAddDevModal}
+                  className="ml-1 text-[#0080A3] hover:text-[#032D42] p-0.5 rounded hover:bg-slate-200/80 transition-colors cursor-pointer"
+                  title="Add new developer persona"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+
+          <span className="text-slate-300 font-light hidden sm:inline">|</span>
+
+          {/* Jira Workspace: CONNECTED */}
+          <div className="flex items-center gap-1.5 font-medium text-slate-700">
+            <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
+            <span className="font-bold text-slate-800 hidden sm:inline">Jira:</span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
+              <Workflow className="w-3 h-3 text-blue-600" />
+              CONNECTED
+            </span>
+          </div>
         </div>
-        {onNavigateToInstance && (
-          <button
-            onClick={onNavigateToInstance}
-            className="text-[#0080A3] hover:underline font-semibold text-[11px] cursor-pointer"
-          >
-            Manage Connection →
-          </button>
-        )}
+
+        <div className="flex items-center gap-3">
+          {hasMessages && (
+            <span className="text-[11px] text-slate-400 font-mono hidden md:inline">
+              {messages.length} session entries
+            </span>
+          )}
+          {hasMessages && onClearMessages && (
+            <button
+              onClick={onClearMessages}
+              className="text-slate-400 hover:text-slate-600 font-medium text-[11px] hover:underline cursor-pointer flex items-center gap-1"
+              title="Reset conversation timeline"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset Chat</span>
+            </button>
+          )}
+          {onNavigateToInstance && (
+            <button
+              onClick={onNavigateToInstance}
+              className="text-[#0080A3] hover:underline font-semibold text-[11px] cursor-pointer"
+            >
+              Manage Connection →
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Chat Scroll Container */}
       <div className="flex-1 overflow-y-auto space-y-4 pr-1 rounded-2xl bg-white p-6 shadow-sm border border-slate-200/80">
         {!hasMessages ? (
-          <div className="flex flex-col items-center justify-center h-full py-8 text-center max-w-2xl mx-auto space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#032D42] to-[#0080A3] flex items-center justify-center text-white shadow-lg ring-4 ring-teal-50">
+          <div className="flex flex-col items-center justify-center h-full py-16 text-center max-w-xl mx-auto space-y-4">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#032D42] via-teal-700 to-[#0080A3] flex items-center justify-center text-white shadow-lg ring-4 ring-teal-50/70 mb-2">
               <Bot className="w-8 h-8" />
             </div>
 
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-[#032D42] tracking-tight">
+            <div className="space-y-1.5">
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-[#032D42] tracking-tight">
                 Ask LAYA Anything in ServiceNow
               </h2>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Your dedicated AI development engineer for Server Scripting, Business Rules,
-                GlideAjax, Flow Designer, Catalog Items, and Service Portal Widgets.
+              <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                Universal Autonomous Execution & Deployment Engine for dev442469
               </p>
             </div>
 
-            {/* Starter Prompt Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full text-left pt-2">
-              {STARTER_PROMPTS.map((item, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => onSendMessage(item.prompt)}
-                  className="p-3.5 rounded-xl bg-slate-50 hover:bg-teal-50/60 border border-slate-200/80 hover:border-teal-300 text-left transition-all duration-150 group cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#0080A3]">
-                      {item.category}
-                    </span>
-                    <Sparkles className="w-3.5 h-3.5 text-slate-400 group-hover:text-teal-600 transition-colors" />
-                  </div>
-                  <h4 className="text-xs font-semibold text-slate-800 group-hover:text-[#032D42] mb-1">
-                    {item.title}
-                  </h4>
-                  <p className="text-[11px] text-slate-500 line-clamp-2">
-                    {item.prompt}
-                  </p>
-                </button>
-              ))}
-            </div>
-
-            {/* Quick Capability Tags */}
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-2 text-[11px] text-slate-500 font-medium">
-              <span className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-md">
-                <Terminal className="w-3.5 h-3.5 text-teal-600" /> GlideRecord & GlideAggregate
-              </span>
-              <span className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-md">
-                <Layers className="w-3.5 h-3.5 text-teal-600" /> Service Portal Widgets
-              </span>
-              <span className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-md">
-                <ShieldCheck className="w-3.5 h-3.5 text-teal-600" /> Anti-Pattern Prevention
-              </span>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-50 border border-slate-200/80 text-slate-500 text-xs font-medium mt-3">
+              <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+              <span>Prompt anything below for automated live Table API deployment</span>
             </div>
           </div>
         ) : (
@@ -217,17 +289,33 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
                         <div className="leading-relaxed">{msg.content}</div>
                       </div>
-                      <button
-                        onClick={onRetry}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs shadow-sm transition-colors cursor-pointer"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Retry Request</span>
-                      </button>
+                      {msg.deploymentResult && (
+                        <LiveDeploymentCard deployment={msg.deploymentResult} onRetry={onRetry} />
+                      )}
+                      {(msg.jiraSync || msg.deploymentResult?.jiraSync) && (
+                        <JiraSyncCard syncData={(msg.jiraSync || msg.deploymentResult?.jiraSync)!} />
+                      )}
+                      {!msg.deploymentResult && (
+                        <button
+                          onClick={onRetry}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs shadow-sm transition-colors cursor-pointer"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Retry Request</span>
+                        </button>
+                      )}
                     </div>
                   ) : (
-                    <div className="markdown-body text-slate-800 text-[13.5px] leading-relaxed overflow-x-auto">
-                      <Markdown>{msg.content}</Markdown>
+                    <div className="space-y-2">
+                      <div className="markdown-body text-slate-800 text-[13.5px] leading-relaxed overflow-x-auto">
+                        <Markdown>{msg.content}</Markdown>
+                      </div>
+                      {msg.deploymentResult && (
+                        <LiveDeploymentCard deployment={msg.deploymentResult} onRetry={onRetry} />
+                      )}
+                      {(msg.jiraSync || msg.deploymentResult?.jiraSync) && (
+                        <JiraSyncCard syncData={(msg.jiraSync || msg.deploymentResult?.jiraSync)!} />
+                      )}
                     </div>
                   )}
                 </div>
@@ -261,8 +349,43 @@ export const ChatView: React.FC<ChatViewProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
+      {/* 3 Simple, Minimal Pill Chips Directly Above Chat Bar */}
+      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1 px-1">
+        {QUICK_PILLS.map((pill, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => onSendMessage(pill.prompt)}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white hover:bg-teal-50 text-slate-700 hover:text-teal-900 border border-slate-200/90 hover:border-teal-400 text-xs font-semibold shadow-2xs hover:shadow-xs transition-all duration-150 cursor-pointer disabled:opacity-50"
+            title={pill.prompt}
+          >
+            <span>{pill.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Active Persona & Container Binding Strip */}
+      {activeDeveloper && (
+        <div className="flex flex-wrap items-center justify-between gap-2 px-2 pt-0.5 text-[11px] text-slate-500">
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="font-semibold text-slate-700">Binding Persona:</span>
+            <span className="font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+              {activeDeveloper.personaCode || 'Dev'}: {activeDeveloper.name}
+            </span>
+            <span className="text-slate-400">•</span>
+            <span className="font-mono text-indigo-800 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 font-semibold truncate">
+              Container: {activeDeveloper.associatedUpdateSetName}
+            </span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
+            All prompt deployments auto-bound to dev442469
+          </span>
+        </div>
+      )}
+
       {/* Input Prompt Box */}
-      <form onSubmit={handleSubmit} className="mt-3 relative">
+      <form onSubmit={handleSubmit} className="mt-1 relative">
         <div className="relative flex items-center bg-white rounded-2xl border border-slate-300 shadow-sm focus-within:border-[#0080A3] focus-within:ring-2 focus-within:ring-teal-500/20 transition-all">
           <textarea
             value={input}
@@ -273,7 +396,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 handleSubmit(e);
               }
             }}
-            placeholder="Ask LAYA about Script Includes, Business Rules, Flow Designer, Service Portal, GlideRecord..."
+            placeholder="Ask LAYA anything... (e.g., Onboard employee, emergency change, business rule, script include, catalog item)"
             rows={2}
             className="w-full bg-transparent px-4 py-3 text-sm text-slate-800 placeholder-slate-400 resize-none focus:outline-none"
             disabled={isLoading}

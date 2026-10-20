@@ -1,3 +1,42 @@
+export interface JiraSyncCardData {
+  issueKey: string;
+  summary: string;
+  issueType: 'Story' | 'Bug' | 'Task' | 'Epic';
+  status: 'SYNCED' | 'IN PROGRESS' | 'RESOLVED' | 'TO DO';
+  priority: 'Highest' | 'High' | 'Medium' | 'Low';
+  projectKey: string;
+  projectName: string;
+  assignee: string;
+  serviceNowRef: {
+    table: string;
+    sysId?: string;
+    number?: string;
+  };
+  sprint: string;
+  syncTimestamp: string;
+  jiraUrl: string;
+}
+
+export interface DeploymentResultCard {
+  success: boolean;
+  table: string;
+  sysId?: string;
+  number?: string;
+  name?: string;
+  deepLink?: string;
+  recordSummary: string;
+  category?: string;
+  instanceUrl: string;
+  executionTimeMs?: number;
+  explanation?: string;
+  updateSetName?: string;
+  developerName?: string;
+  displayFields?: Record<string, any>;
+  error?: string;
+  selfCorrected?: boolean;
+  jiraSync?: JiraSyncCardData;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
@@ -7,9 +46,12 @@ export interface ChatMessage {
   isError?: boolean;
   errorType?: 'high_demand' | 'network' | 'generic';
   modelUsed?: string;
+  deploymentResult?: DeploymentResultCard;
+  jiraSync?: JiraSyncCardData;
 }
 
 export type ActiveTab =
+  | 'orchestrator'
   | 'chat'
   | 'instance'
   | 'flowDesigner'
@@ -248,6 +290,83 @@ export interface UpdateCollision {
   }[];
   selectedWinnerSetId: string; // user chosen resolution
   resolutionStrategy: 'latest' | 'earliest' | 'custom';
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: string;
+  email?: string;
+  associatedUpdateSetId?: string;
+  associatedUpdateSetName?: string;
+  avatarColor?: string;
+  state?: 'In progress' | 'Complete' | 'Ignore';
+  personaCode?: string; // e.g. "Dev 1", "Dev 2", "Dev 3"
+}
+
+export interface ArchitectureComponent {
+  id: string;
+  type: 'sys_db_object' | 'sys_hub_flow' | 'sys_decision' | 'sc_cat_item' | 'sys_script_client' | 'sys_script' | 'sys_script_include' | 'sysevent_email_action' | 'sys_ui_action';
+  typeName: string;
+  name: string;
+  targetTable: string;
+  description: string;
+  details: Record<string, string>;
+  codeSnippet?: string;
+  dependencies: string[];
+  scope?: string;
+}
+
+export interface DiagramNode {
+  id: string;
+  label: string;
+  sublabel?: string;
+  category: 'trigger' | 'logic' | 'data' | 'ui' | 'notification';
+  x: number;
+  y: number;
+}
+
+export interface DiagramEdge {
+  from: string;
+  to: string;
+  label?: string;
+}
+
+export interface ArchitecturePlan {
+  id: string;
+  title: string;
+  prompt: string;
+  scope: string;
+  summary: string;
+  components: ArchitectureComponent[];
+  diagramNodes: DiagramNode[];
+  diagramEdges: DiagramEdge[];
+  approved: boolean;
+  assignedDeveloperId?: string;
+  targetUpdateSetId?: string;
+  generatedTimestamp?: string;
+}
+
+export type DeploymentPhase = 'idle' | 'parsing' | 'generating' | 'resolving' | 'deploying' | 'completed' | 'failed';
+
+export interface DeploymentLogEntry {
+  timestamp: string;
+  message: string;
+  type: 'info' | 'success' | 'warn' | 'error';
+}
+
+export interface DeploymentState {
+  phase: DeploymentPhase;
+  currentStepIndex: number; // 1 to 4
+  stepTitles: string[];
+  targetInstance: string;
+  logs: DeploymentLogEntry[];
+  commitSysId?: string;
+  updateSetName?: string;
+  createdRecord?: any;
+  errorMessage?: string;
+  completedAt?: string;
+  totalChangesCommitted?: number;
 }
 
 export interface ReleasePackageConfig {

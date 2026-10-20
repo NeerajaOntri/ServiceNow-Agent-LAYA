@@ -48,8 +48,8 @@ export const QueryBuilder: React.FC<QueryBuilderProps> = ({
 
   const instanceHost = instanceStatus?.instanceUrl
     ? instanceStatus.instanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')
-    : 'dev213909.service-now.com';
-  const shortInstanceName = instanceHost.split('.')[0] || 'dev213909';
+    : 'dev442469.service-now.com';
+  const shortInstanceName = instanceHost.split('.')[0] || 'dev442469';
 
   useEffect(() => {
     if (initialTable) setSelectedTable(initialTable);

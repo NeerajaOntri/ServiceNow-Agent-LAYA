@@ -10,7 +10,11 @@ import {
   disconnectActiveConfig,
   pingAndCheckStatus,
   queryTableRecords,
+  createUpdateSetRecord,
+  createUniversalRecord,
 } from "./server/servicenow";
+import { executeNowAssistAutonomous } from "./server/nowAssistEngine";
+import { checkAndGenerateJiraSync } from "./server/jiraSyncEngine";
 
 dotenv.config();
 
@@ -124,102 +128,158 @@ app.post("/api/servicenow/execute-query", async (req, res) => {
   }
 });
 
-const CANDIDATE_MODELS = [
-  "gemini-flash-latest",
-  "gemini-3.1-flash-lite",
-  "gemini-3.8-flash",
-];
-
-async function generateWithFallback(
-  ai: GoogleGenAI,
-  contents: any[],
-  systemInstruction: string
-): Promise<{ text: string; modelUsed: string }> {
-  let lastError: any = null;
-
-  for (const model of CANDIDATE_MODELS) {
-    try {
-      const response = await ai.models.generateContent({
-        model,
-        contents,
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-        },
-      });
-
-      if (response.text) {
-        return { text: response.text, modelUsed: model };
-      }
-    } catch (err: any) {
-      lastError = err;
-      const errMsg = err?.message || String(err);
-      const isHighDemand =
-        err?.status === 503 ||
-        errMsg.includes("503") ||
-        errMsg.includes("high demand") ||
-        errMsg.includes("UNAVAILABLE");
-
-      console.log(
-        `[AI Router] Model ${model} unavailable (${isHighDemand ? "high demand" : "transient"}). Trying fallback candidate...`
-      );
-      continue;
+app.post("/api/servicenow/update-set", async (req, res) => {
+  try {
+    const { name, state = "complete", description = "", instanceUrl, username, password } = req.body;
+    if (!name) {
+      return res.status(400).json({ success: false, error: "Update Set name is required" });
     }
+    const result = await createUpdateSetRecord({
+      name,
+      state,
+      description,
+      instanceUrl,
+      username,
+      password,
+    });
+    if (!result.success) {
+      return res.status(result.statusCode || 500).json(result);
+    }
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || "Failed to create Update Set in ServiceNow",
+    });
   }
+});
 
-  throw lastError || new Error("All candidate models failed to generate a response.");
-}
+app.post("/api/servicenow/universal-deploy", async (req, res) => {
+  try {
+    const { prompt, table, payload, activeUpdateSetName, developerName } = req.body;
+    if (!prompt) {
+      return res.status(400).json({ success: false, error: "Prompt or requirement text is required." });
+    }
+    const result = await executeNowAssistAutonomous({
+      prompt,
+      table,
+      payload,
+      activeUpdateSetName,
+      developerName,
+    });
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({
+      success: false,
+      error: err?.message || "Now Assist autonomous deployment failed",
+    });
+  }
+});
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { messages, activeDeveloperName, activeUpdateSetName } = req.body;
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "Messages array is required." });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(200).json({
-        reply: `Hello! I am **LAYA**, your ServiceNow full-stack development specialist. 
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+    const promptText = lastUserMessage?.content || "";
 
-I see that the \`GEMINI_API_KEY\` is not currently set in your project environment secrets. Once you provide the key in **Settings > Secrets**, I will provide dynamic AI-powered answers, code generation, and debugging.
+    // Multi-turn context retention: Scan earlier messages for previously generated ServiceNow records
+    let contextPrompt = promptText;
+    const previousDeployments = messages
+      .filter((m: any) => m.role === "model" && m.deploymentResult?.sysId)
+      .map((m: any) => m.deploymentResult);
 
-In the meantime, you can explore the built-in **ServiceNow Developer Studio** tabs above — including the **Encoded Query Builder**, **Service Portal Widget Studio**, **Anti-Pattern Code Scanner**, and **Horizon Design Token Reference**!`,
-      });
+    if (previousDeployments.length > 0) {
+      const lastDeployment = previousDeployments[previousDeployments.length - 1];
+      const lower = promptText.toLowerCase();
+      if (
+        lower.includes("that") ||
+        lower.includes("this") ||
+        lower.includes("it") ||
+        lower.includes("previous") ||
+        lower.includes("update") ||
+        lower.includes("work note") ||
+        lower.includes("comment")
+      ) {
+        contextPrompt = `${promptText} (Context Reference: table=${lastDeployment.table}, sys_id=${lastDeployment.sysId}, number=${lastDeployment.number || ""}, name=${lastDeployment.name || ""})`;
+      }
     }
 
-    const ai = getAIClient();
+    // Execute Now Assist Autonomous Engine against dev442469
+    const deployResult = await executeNowAssistAutonomous({
+      prompt: contextPrompt,
+      developerName: activeDeveloperName,
+      activeUpdateSetName: activeUpdateSetName,
+    });
 
-    // Map conversation to @google/genai format
-    const contents = messages.map((m: { role: string; content: string }) => ({
-      role: m.role === "model" || m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
+    // Check & generate Jira Workspace Sync (Secondary Integration)
+    const jiraSync = checkAndGenerateJiraSync({
+      prompt: promptText,
+      table: deployResult.table,
+      sysId: deployResult.sysId,
+      number: deployResult.number,
+      recordName: deployResult.name,
+      developerName: activeDeveloperName,
+      priority: deployResult.record?.priority || "2",
+    });
 
-    const snConfig = getActiveConfig();
-    const instanceContext = `\n\n# ACTIVE INSTANCE CONTEXT\nTarget ServiceNow Instance: ${snConfig.instanceUrl}\nConfigured Username: ${snConfig.username || 'admin'}\nHas Credentials Configured: ${Boolean(snConfig.token || (snConfig.username && snConfig.password))}\nWhen the user asks to connect or interact with their instance ${snConfig.instanceUrl}, reference this specific instance URL, explain how to authenticate or wake up hibernating developer instances from developer.servicenow.com, and guide them on Table API and ServiceNow integration best practices.`;
+    if (jiraSync) {
+      deployResult.jiraSync = jiraSync;
+    }
 
-    const { text, modelUsed } = await generateWithFallback(
-      ai,
-      contents,
-      LAYA_SYSTEM_INSTRUCTION + instanceContext
-    );
+    if (deployResult.success) {
+      const selfCorrectedNote = deployResult.selfCorrected ? " *(Auto-Healed Schema & Missing Fields)*" : "";
+      const jiraNote = jiraSync
+        ? `\n\n**Jira Workspace Traceability:**\n- **Issue Key:** \`${jiraSync.issueKey}\` (${jiraSync.issueType})\n- **Sync Status:** \`${jiraSync.status}\` | **Priority:** \`${jiraSync.priority}\`\n- **Sprint:** \`${jiraSync.sprint}\`\n- **Assignee:** \`${jiraSync.assignee}\`\n- **Direct Link:** [${jiraSync.jiraUrl}](${jiraSync.jiraUrl})`
+        : "";
 
-    return res.json({ reply: text, modelUsed });
+      const executiveSummary = `### ⚡ Now Assist Autonomous Execution Complete — dev442469
+
+**Platform Target & Governance:**
+- **Instance Endpoint:** \`https://dev442469.service-now.com\` (Status: ONLINE)
+- **Resolved Table:** \`/api/now/table/${deployResult.table}\`
+- **Record Identifier:** \`${deployResult.number || deployResult.name || deployResult.sysId}\`
+- **Generated sys_id:** \`${deployResult.sysId}\`
+- **Active Update Set Container:** \`${deployResult.updateSetName}\`
+- **Developer Persona:** \`${deployResult.developerName}\`
+- **Execution Speed:** \`${deployResult.executionTimeMs}ms\`${selfCorrectedNote}
+
+**Now Assist Architecture:** ${deployResult.explanation}${jiraNote}
+
+The configuration has been dynamically synthesized, validated, and committed directly into instance **dev442469** under strict enterprise governance. Open the **Live Verification Card** below to access the record in ServiceNow Classic / Polaris UI.`;
+
+      return res.json({
+        reply: executiveSummary,
+        modelUsed: "Now Assist Autonomous Engine (dev442469)",
+        deploymentResult: deployResult,
+        jiraSync: jiraSync || undefined,
+      });
+    } else {
+      const failureSummary = `### ⚠️ Now Assist Deployment Discrepancy
+
+- **Target Instance:** \`${deployResult.instanceUrl}\`
+- **Table:** \`${deployResult.table}\`
+- **Error:** ${deployResult.error}
+
+The automated deployment encountered an issue while communicating with the Table API on instance dev442469. Click **Retry Deployment** below to re-verify credentials and execute.`;
+
+      return res.json({
+        reply: failureSummary,
+        modelUsed: "Now Assist Autonomous Engine (dev442469)",
+        deploymentResult: deployResult,
+        jiraSync: jiraSync || undefined,
+      });
+    }
   } catch (error: any) {
     console.error("Error in /api/chat:", error);
-    const errMsg = error?.message || "Failed to process chat with LAYA.";
-    const isHighDemand =
-      error?.status === 503 ||
-      errMsg.includes("503") ||
-      errMsg.includes("high demand") ||
-      errMsg.includes("UNAVAILABLE");
-
-    return res.status(isHighDemand ? 503 : 500).json({
-      error: isHighDemand
-        ? "The AI model is currently experiencing temporary high demand on Google's servers. Please click 'Retry' in a moment to try again."
-        : errMsg,
-      isHighDemand,
+    const errMsg = error?.message || "Failed to execute Now Assist autonomous deployment.";
+    return res.status(500).json({
+      error: errMsg,
+      success: false,
     });
   }
 });

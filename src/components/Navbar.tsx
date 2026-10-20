@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActiveTab, InstanceStatus } from '../types';
+import { ActiveTab, InstanceStatus, TeamMember } from '../types';
 import { 
   Bot, 
   Filter, 
@@ -8,12 +8,15 @@ import {
   Palette, 
   BookOpen,
   Server,
-  ExternalLink,
   GitMerge,
   TableProperties,
   Mail,
   ShoppingBag,
-  GitPullRequest
+  GitPullRequest,
+  Boxes,
+  User,
+  UserPlus,
+  CheckCircle2
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -21,6 +24,11 @@ interface NavbarProps {
   setActiveTab: (tab: ActiveTab) => void;
   serverStatus: 'online' | 'connecting' | 'offline';
   instanceStatus: InstanceStatus | null;
+  activeDeveloper?: TeamMember;
+  onSelectDeveloper?: (member: TeamMember) => void;
+  teamMembers?: TeamMember[];
+  onToggleActiveSetState?: () => void;
+  onOpenAddDevModal?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -28,13 +36,19 @@ export const Navbar: React.FC<NavbarProps> = ({
   setActiveTab,
   serverStatus,
   instanceStatus,
+  activeDeveloper,
+  onSelectDeveloper,
+  teamMembers,
+  onToggleActiveSetState,
+  onOpenAddDevModal,
 }) => {
   const shortInstanceName = instanceStatus?.instanceUrl
     ? instanceStatus.instanceUrl.replace(/^https?:\/\//, '').replace('.service-now.com', '').replace(/\/$/, '')
-    : 'dev213909';
+    : 'dev442469';
 
   const tabs = [
-    { id: 'chat' as ActiveTab, label: 'LAYA Assistant', icon: Bot },
+    { id: 'chat' as ActiveTab, label: 'Now Assist AI', icon: Bot, badge: 'AUTONOMOUS' },
+    { id: 'orchestrator' as ActiveTab, label: 'Enterprise Orchestrator', icon: Boxes, badge: 'E2E' },
     { id: 'instance' as ActiveTab, label: `Instance (${shortInstanceName})`, icon: Server, badge: instanceStatus?.isAuthenticated ? 'LIVE' : instanceStatus?.isReachable ? 'ONLINE' : undefined },
     { id: 'flowDesigner' as ActiveTab, label: 'Flow Designer', icon: GitMerge, badge: 'NEW' },
     { id: 'decisionTables' as ActiveTab, label: 'Decision Tables', icon: TableProperties, badge: 'NEW' },
@@ -51,10 +65,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-30 bg-[#032D42] text-white shadow-md border-b border-teal-900/40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-16 gap-3">
           {/* Logo & Title */}
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0080A3] to-teal-400 flex items-center justify-center text-white shadow-sm ring-2 ring-teal-500/20">
+          <div className="flex items-center gap-2.5 shrink-0">
+            <div 
+              onClick={() => setActiveTab('chat')} 
+              className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0080A3] to-teal-400 flex items-center justify-center text-white shadow-sm ring-2 ring-teal-500/20 cursor-pointer"
+            >
               <Bot className="w-6 h-6" />
             </div>
             <div>
@@ -73,7 +90,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Navigation Items */}
-          <nav className="hidden lg:flex items-center space-x-1 bg-slate-900/40 p-1 rounded-xl border border-white/10 overflow-x-auto max-w-[65vw] scrollbar-none">
+          <nav className="hidden xl:flex items-center space-x-1 bg-slate-900/50 p-1 rounded-xl border border-white/10 overflow-x-auto max-w-[50vw] scrollbar-none">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -83,7 +100,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer shrink-0 relative ${
                     isActive
-                      ? 'bg-[#0080A3] text-white shadow-sm'
+                      ? 'bg-[#0080A3] text-white shadow-sm font-bold'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -94,6 +111,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                       className={`text-[8px] font-extrabold px-1.5 py-0.2 rounded-full ${
                         tab.badge === 'LIVE'
                           ? 'bg-emerald-500 text-white animate-pulse'
+                          : tab.badge === 'E2E'
+                          ? 'bg-teal-400 text-slate-950 font-black'
                           : tab.badge === 'NEW'
                           ? 'bg-amber-400 text-slate-950 font-black'
                           : 'bg-teal-500/30 text-teal-200'
@@ -107,8 +126,54 @@ export const Navbar: React.FC<NavbarProps> = ({
             })}
           </nav>
 
-          {/* Right Status Indicators: Instance & Server */}
-          <div className="flex items-center gap-2.5 text-xs">
+          {/* Right Status Indicators: Developer Profile Switcher, Instance & Server */}
+          <div className="flex items-center gap-2 text-xs shrink-0">
+            {/* Top Developer Persona Switcher */}
+            {activeDeveloper && teamMembers && onSelectDeveloper && (
+              <div className="hidden md:flex items-center gap-1.5 bg-slate-900/70 border border-teal-500/30 px-2 py-1 rounded-xl">
+                <User className="w-3.5 h-3.5 text-teal-400" />
+                <select
+                  value={activeDeveloper.id}
+                  onChange={(e) => {
+                    const dev = teamMembers.find(m => m.id === e.target.value);
+                    if (dev) onSelectDeveloper(dev);
+                  }}
+                  className="bg-transparent text-white font-mono font-bold text-[11px] focus:outline-none cursor-pointer max-w-[150px] truncate"
+                  title={`Active Developer: ${activeDeveloper.name} (${activeDeveloper.role})`}
+                >
+                  {teamMembers.map(m => (
+                    <option key={m.id} value={m.id} className="bg-slate-900 text-white font-sans">
+                      {m.personaCode || 'Dev'}: {m.name}
+                    </option>
+                  ))}
+                </select>
+
+                {onToggleActiveSetState && (
+                  <button
+                    onClick={onToggleActiveSetState}
+                    className={`px-1.5 py-0.2 rounded text-[9px] font-bold font-mono border cursor-pointer ${
+                      activeDeveloper.state === 'Complete'
+                        ? 'bg-emerald-950 text-emerald-300 border-emerald-500/40'
+                        : 'bg-amber-950 text-amber-300 border-amber-500/40'
+                    }`}
+                    title="Toggle Update Set State (sys_update_set.state)"
+                  >
+                    {activeDeveloper.state === 'Complete' ? '✓ Complete' : '● In Progress'}
+                  </button>
+                )}
+
+                {onOpenAddDevModal && (
+                  <button
+                    onClick={onOpenAddDevModal}
+                    className="p-1 rounded text-teal-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                    title="Add Dynamic Developer Persona & Auto-Generate Update Set on dev442469"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Instance Quick Pill */}
             <button
               onClick={() => setActiveTab('instance')}
@@ -119,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-teal-950/60 text-teal-300 border-teal-500/30 hover:bg-teal-900/60'
                   : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
               }`}
-              title={`ServiceNow Instance: ${instanceStatus?.instanceUrl || 'https://dev213909.service-now.com'}`}
+              title={`ServiceNow Instance: ${instanceStatus?.instanceUrl || 'https://dev442469.service-now.com'}`}
             >
               <span
                 className={`w-2 h-2 rounded-full ${
@@ -164,8 +229,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Mobile Horizontal Tab Scroller */}
-        <div className="flex lg:hidden overflow-x-auto py-2 gap-1 border-t border-white/10 scrollbar-none">
+        {/* Mobile / Tablet Horizontal Tab Scroller */}
+        <div className="flex xl:hidden overflow-x-auto py-2 gap-1 border-t border-white/10 scrollbar-none">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -189,4 +254,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-

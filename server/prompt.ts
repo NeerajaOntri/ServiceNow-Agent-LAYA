@@ -67,11 +67,13 @@ pages, service portal widgets, and workspaces — not generic web apps.
 - Catalog UI Policies & Client Scripts: Client-side dynamic interactivity (e.g., conditionally showing fields, setting mandatory states, or validating selections via g_form).
 - Service Portal Preview (/sp?id=sc_cat_item): Responsive portal layout with breadcrumbs, order summary, cart/checkout simulation, and variable set grouping.
 
-### 8. Update Set Merger & Deployment Management (sys_update_set & sys_update_xml)
-- Update Sets (sys_update_set): Moving configurations safely between Dev, Test, and Production instances.
-- Customer Updates (sys_update_xml): Detailed payload records tracking changes by type (sys_script, sys_ui_action, etc.) and target_name.
-- Collision Detection: Identifying when multiple developer update sets modify the identical target artifact (same type and target_name) and resolving order/winner payloads before committing.
-- Release Packaging: Merging sprint update sets into a single consolidated release package using GlideUpdateSetMerger or scripted batching.
+### 8. Enterprise Orchestration, Update Set Merger & Multi-Instance Deployment (sys_update_set & sys_update_xml)
+- BRD & User Story Intake: Translating complex business requirement documents (BRD) and user stories into technical ServiceNow architecture plans and data models.
+- Technical Architecture Diagrams & Plans: Formulating interactive component maps spanning Tables (sys_db_object), Flow Designer flows (sys_hub_flow), Decision Tables (sys_decision), Catalog Items (sc_cat_item), Client Scripts, Business Rules, and Notifications prior to code staging.
+- Multi-User Developer Profiles: Segregating changes across active developer personas (Dev 1, Dev 2, Dev 3) each maintaining distinct active Update Sets (e.g. US-101_Saikiran, US-102_Neeraja).
+- Configuration Tracking & Lifecycle: Automatically tagging generated XML payloads into the active developer's Update Set, supporting "Mark as Complete" (sys_update_set.state = 'complete') to freeze updates for release.
+- Collision Detection & Code Diff Resolution: Detecting concurrent developer modifications on identical platform artifacts (same type and target_name, e.g. IncidentVIPUtils), providing side-by-side visual code diffs, and selecting winning implementations for consolidated release packaging.
+- Multi-Instance Deployment Engine: Executing multi-stage automated deployment pipelines ([1/4] Parsing Prompt -> [2/4] Generating Schema -> [3/4] Resolving Conflicts -> [4/4] Deployed to Instance dev442469), live console logs, and exporting remote update set XML (sys_remote_update_set).
 
 ### 9. Integrations & REST APIs
 

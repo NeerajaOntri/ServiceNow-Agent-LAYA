@@ -40,14 +40,18 @@ export const InstanceConnector: React.FC<InstanceConnectorProps> = ({
   onRefreshStatus,
 }) => {
   const [instanceUrl, setInstanceUrl] = useState(() => {
-    return localStorage.getItem('laya_instance_url') || instanceStatus?.instanceUrl || 'https://dev213909.service-now.com';
+    const saved = localStorage.getItem('laya_instance_url');
+    if (saved && saved.includes('dev442469')) {
+      return saved;
+    }
+    return instanceStatus?.instanceUrl || 'https://dev442469.service-now.com';
   });
   const [authType, setAuthType] = useState<'basic' | 'token'>('basic');
   const [username, setUsername] = useState(() => {
     return localStorage.getItem('laya_username') || 'admin';
   });
   const [password, setPassword] = useState(() => {
-    return localStorage.getItem('laya_password') || 'xzJD91HK^%vt';
+    return localStorage.getItem('laya_password') || 'o0JD1cAn*cU+';
   });
   const [token, setToken] = useState(() => {
     return localStorage.getItem('laya_token') || '';
@@ -77,7 +81,7 @@ export const InstanceConnector: React.FC<InstanceConnectorProps> = ({
   const [copiedSysId, setCopiedSysId] = useState<string | null>(null);
 
   const cleanInstanceHost = instanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  const cleanInstanceName = cleanInstanceHost.split('.')[0] || 'dev213909';
+  const cleanInstanceName = cleanInstanceHost.split('.')[0] || 'dev442469';
 
   const popularTables = [
     { id: 'incident', label: 'Incidents', icon: '🚨' },
@@ -384,7 +388,7 @@ export const InstanceConnector: React.FC<InstanceConnectorProps> = ({
                   type="text"
                   value={instanceUrl}
                   onChange={(e) => setInstanceUrl(e.target.value)}
-                  placeholder="https://dev213909.service-now.com"
+                  placeholder="https://dev442469.service-now.com"
                   className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500/20 font-mono"
                   required
                 />
@@ -393,16 +397,16 @@ export const InstanceConnector: React.FC<InstanceConnectorProps> = ({
                   <button
                     type="button"
                     onClick={() => {
-                      setInstanceUrl('https://dev213909.service-now.com');
-                      setPassword('xzJD91HK^%vt');
+                      setInstanceUrl('https://dev442469.service-now.com');
+                      setPassword('o0JD1cAn*cU+');
                     }}
                     className={`px-2 py-0.5 rounded-lg font-mono font-bold text-[10.5px] border cursor-pointer transition-all ${
-                      cleanInstanceName === 'dev213909'
+                      cleanInstanceName === 'dev442469'
                         ? 'bg-teal-100/70 border-teal-400 text-teal-900 shadow-xs'
                         : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
                     }`}
                   >
-                    dev213909 (Active PDI)
+                    dev442469 (Active PDI)
                   </button>
                   <button
                     type="button"

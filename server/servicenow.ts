@@ -25,14 +25,14 @@ export interface InstanceStatusResult {
 // In-memory active configuration initialized from environment or default target
 let activeConfig: ServiceNowConfig = {
   instanceUrl:
-    process.env.SERVICENOW_INSTANCE_URL && process.env.SERVICENOW_INSTANCE_URL !== 'https://dev411582.service-now.com'
+    process.env.SERVICENOW_INSTANCE_URL && process.env.SERVICENOW_INSTANCE_URL.includes('dev442469')
       ? process.env.SERVICENOW_INSTANCE_URL.replace(/\/$/, '')
-      : 'https://dev213909.service-now.com',
+      : 'https://dev442469.service-now.com',
   username: process.env.SERVICENOW_USERNAME || 'admin',
   password:
     process.env.SERVICENOW_PASSWORD && process.env.SERVICENOW_PASSWORD !== 'r!v9xMV1HG+v'
       ? process.env.SERVICENOW_PASSWORD
-      : 'xzJD91HK^%vt',
+      : 'o0JD1cAn*cU+',
   token: '',
 };
 
@@ -89,7 +89,7 @@ export function buildAuthHeaders(config: ServiceNowConfig = activeConfig): Recor
 
 export async function pingAndCheckStatus(targetConfig?: ServiceNowConfig): Promise<InstanceStatusResult> {
   const config = targetConfig || activeConfig;
-  const instanceUrl = (config.instanceUrl || 'https://dev213909.service-now.com').replace(/\/$/, '');
+  const instanceUrl = (config.instanceUrl || 'https://dev442469.service-now.com').replace(/\/$/, '');
   const hasCredentials = Boolean(config.token?.trim() || (config.username?.trim() && config.password));
   const authMethod: 'basic' | 'token' | 'none' = config.token?.trim()
     ? 'token'
@@ -501,7 +501,7 @@ export async function queryTableRecords(params: {
 }> {
   const { table, query = '', limit = 25, fields = '', displayValue = 'true' } = params;
   const config = activeConfig;
-  const instanceUrl = config.instanceUrl || 'https://dev213909.service-now.com';
+  const instanceUrl = config.instanceUrl || 'https://dev442469.service-now.com';
   const instanceHost = instanceUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
   try {
@@ -574,3 +574,162 @@ export async function queryTableRecords(params: {
     };
   }
 }
+
+export interface CreateUpdateSetParams {
+  name: string;
+  state?: string;
+  description?: string;
+  instanceUrl?: string;
+  username?: string;
+  password?: string;
+}
+
+export async function createUpdateSetRecord(params: CreateUpdateSetParams): Promise<{
+  success: boolean;
+  sysId?: string;
+  result?: any;
+  error?: string;
+  statusCode?: number;
+  instanceUrl: string;
+}> {
+  const { name, state = 'complete', description = '', instanceUrl: customUrl, username: customUser, password: customPass } = params;
+
+  const targetUrl = (customUrl || activeConfig.instanceUrl || 'https://dev442469.service-now.com').replace(/\/$/, '');
+  const username = customUser || activeConfig.username || 'admin';
+  const password = customPass || activeConfig.password || 'o0JD1cAn*cU+';
+
+  try {
+    const url = `${targetUrl}/api/now/table/sys_update_set`;
+    const authString = Buffer.from(`${username}:${password}`).toString('base64');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const bodyPayload = {
+      name,
+      state,
+      description,
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(bodyPayload),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const errorMsg = data?.error?.message || data?.error?.detail || `HTTP ${response.status}: Failed to create Update Set`;
+      return {
+        success: false,
+        error: errorMsg,
+        statusCode: response.status,
+        result: data,
+        instanceUrl: targetUrl,
+      };
+    }
+
+    const createdRecord = data?.result;
+    const sysId = createdRecord?.sys_id || (typeof createdRecord === 'object' ? createdRecord.sys_id : '');
+
+    return {
+      success: true,
+      sysId,
+      result: createdRecord,
+      statusCode: response.status,
+      instanceUrl: targetUrl,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Network error connecting to ServiceNow sys_update_set endpoint',
+      instanceUrl: targetUrl,
+    };
+  }
+}
+
+export interface UniversalRecordParams {
+  table: string;
+  payload: Record<string, any>;
+  instanceUrl?: string;
+  username?: string;
+  password?: string;
+}
+
+export async function createUniversalRecord(params: UniversalRecordParams): Promise<{
+  success: boolean;
+  sysId?: string;
+  table: string;
+  result?: any;
+  error?: string;
+  statusCode?: number;
+  instanceUrl: string;
+}> {
+  const { table = 'incident', payload = {}, instanceUrl: customUrl, username: customUser, password: customPass } = params;
+
+  const targetUrl = (customUrl || activeConfig.instanceUrl || 'https://dev442469.service-now.com').replace(/\/$/, '');
+  const username = customUser || activeConfig.username || 'admin';
+  const password = customPass || activeConfig.password || 'o0JD1cAn*cU+';
+
+  try {
+    const url = `${targetUrl}/api/now/table/${table}`;
+    const authString = Buffer.from(`${username}:${password}`).toString('base64');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${authString}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    const data = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const errorMsg = data?.error?.message || data?.error?.detail || `HTTP ${response.status}: Failed to create record on table ${table}`;
+      return {
+        success: false,
+        table,
+        error: errorMsg,
+        statusCode: response.status,
+        result: data,
+        instanceUrl: targetUrl,
+      };
+    }
+
+    const createdRecord = data?.result;
+    const sysId = createdRecord?.sys_id || (typeof createdRecord === 'object' ? createdRecord.sys_id : '');
+
+    return {
+      success: true,
+      table,
+      sysId,
+      result: createdRecord,
+      statusCode: response.status,
+      instanceUrl: targetUrl,
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      table,
+      error: err?.message || `Network error connecting to ServiceNow table endpoint ${table}`,
+      instanceUrl: targetUrl,
+    };
+  }
+}
+
+
