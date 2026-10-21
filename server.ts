@@ -171,7 +171,7 @@ app.post("/api/servicenow/universal-deploy", async (req, res) => {
   } catch (err: any) {
     res.status(500).json({
       success: false,
-      error: err?.message || "Now Assist autonomous deployment failed",
+      error: err?.message || "DeepKorce Orchestration Engine autonomous deployment failed",
     });
   }
 });
@@ -209,7 +209,7 @@ app.post("/api/chat", async (req, res) => {
       }
     }
 
-    // Execute Now Assist Autonomous Engine against dev442469
+    // Execute DeepKorce Orchestration Engine Autonomous Engine against dev442469
     const deployResult = await executeNowAssistAutonomous({
       prompt: contextPrompt,
       developerName: activeDeveloperName,
@@ -237,7 +237,7 @@ app.post("/api/chat", async (req, res) => {
         ? `\n\n**Jira Workspace Traceability:**\n- **Issue Key:** \`${jiraSync.issueKey}\` (${jiraSync.issueType})\n- **Sync Status:** \`${jiraSync.status}\` | **Priority:** \`${jiraSync.priority}\`\n- **Sprint:** \`${jiraSync.sprint}\`\n- **Assignee:** \`${jiraSync.assignee}\`\n- **Direct Link:** [${jiraSync.jiraUrl}](${jiraSync.jiraUrl})`
         : "";
 
-      const executiveSummary = `### ⚡ Now Assist Autonomous Execution Complete — dev442469
+      const executiveSummary = `### ⚡ DeepKorce Orchestration Engine Autonomous Execution Complete — dev442469
 
 **Platform Target & Governance:**
 - **Instance Endpoint:** \`https://dev442469.service-now.com\` (Status: ONLINE)
@@ -248,18 +248,18 @@ app.post("/api/chat", async (req, res) => {
 - **Developer Persona:** \`${deployResult.developerName}\`
 - **Execution Speed:** \`${deployResult.executionTimeMs}ms\`${selfCorrectedNote}
 
-**Now Assist Architecture:** ${deployResult.explanation}${jiraNote}
+**DeepKorce Orchestration Engine Architecture:** ${deployResult.explanation}${jiraNote}
 
 The configuration has been dynamically synthesized, validated, and committed directly into instance **dev442469** under strict enterprise governance. Open the **Live Verification Card** below to access the record in ServiceNow Classic / Polaris UI.`;
 
       return res.json({
         reply: executiveSummary,
-        modelUsed: "Now Assist Autonomous Engine (dev442469)",
+        modelUsed: "DeepKorce Orchestration Engine Autonomous Engine (dev442469)",
         deploymentResult: deployResult,
         jiraSync: jiraSync || undefined,
       });
     } else {
-      const failureSummary = `### ⚠️ Now Assist Deployment Discrepancy
+      const failureSummary = `### ⚠️ DeepKorce Orchestration Engine Deployment Discrepancy
 
 - **Target Instance:** \`${deployResult.instanceUrl}\`
 - **Table:** \`${deployResult.table}\`
@@ -269,14 +269,14 @@ The automated deployment encountered an issue while communicating with the Table
 
       return res.json({
         reply: failureSummary,
-        modelUsed: "Now Assist Autonomous Engine (dev442469)",
+        modelUsed: "DeepKorce Orchestration Engine Autonomous Engine (dev442469)",
         deploymentResult: deployResult,
         jiraSync: jiraSync || undefined,
       });
     }
   } catch (error: any) {
     console.error("Error in /api/chat:", error);
-    const errMsg = error?.message || "Failed to execute Now Assist autonomous deployment.";
+    const errMsg = error?.message || "Failed to execute DeepKorce Orchestration Engine autonomous deployment.";
     return res.status(500).json({
       error: errMsg,
       success: false,
