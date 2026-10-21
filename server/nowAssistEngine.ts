@@ -32,7 +32,6 @@ export interface NowAssistDeploymentResult {
 }
 
 let geminiClient: GoogleGenAI | null = null;
-let geminiQuotaExhausted = false;
 function getGeminiClient(): GoogleGenAI | null {
   if (!geminiClient) {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -90,23 +89,23 @@ function applyEnterpriseFieldDefaults(
       }
       payload.active = payload.active !== undefined ? String(payload.active) : 'true';
       if (!payload.introduction) {
-        payload.introduction = `DeepKorce Orchestration Engine Autonomous Provisioning: ${summarySnippet}`;
+        payload.introduction = `Now Assist Autonomous Provisioning: ${summarySnippet}`;
       }
       break;
     }
 
     case 'incident': {
       if (!payload.short_description) {
-        payload.short_description = summarySnippet || 'DeepKorce Orchestration Engine Autonomous Incident';
+        payload.short_description = summarySnippet || 'Now Assist Autonomous Incident';
       }
       if (!payload.description) {
-        payload.description = `Requirement details:\n${cleanPrompt}\n\n[DeepKorce Orchestration Engine Engine Orchestration | Requestor: ${developerName}]`;
+        payload.description = `Requirement details:\n${cleanPrompt}\n\n[Now Assist Engine Orchestration | Requestor: ${developerName}]`;
       }
       if (!payload.urgency) payload.urgency = '2';
       if (!payload.impact) payload.impact = '2';
       if (!payload.priority) payload.priority = '2';
       if (!payload.comments) {
-        payload.comments = `Autonomous execution initiated by DeepKorce Orchestration Engine for persona ${developerName}.`;
+        payload.comments = `Autonomous execution initiated by Now Assist for persona ${developerName}.`;
       }
       break;
     }
@@ -125,7 +124,7 @@ function applyEnterpriseFieldDefaults(
         lowerPrompt.includes('pre-approved');
 
       if (!payload.short_description) {
-        payload.short_description = summarySnippet || 'DeepKorce Orchestration Engine Orchestrated Change';
+        payload.short_description = summarySnippet || 'Now Assist Orchestrated Change';
       }
       if (!payload.description) {
         payload.description = `Release details:\n${cleanPrompt}\n\n[Enterprise Governance | Architect: ${developerName}]`;
@@ -156,7 +155,7 @@ function applyEnterpriseFieldDefaults(
 
       if (!payload.justification) {
         payload.justification = isEmergency
-          ? `Emergency operational patch deployed by DeepKorce Orchestration Engine for: ${summarySnippet}`
+          ? `Emergency operational patch deployed by Now Assist for: ${summarySnippet}`
           : `Enterprise deployment for: ${summarySnippet}`;
       }
       break;
@@ -175,10 +174,10 @@ function applyEnterpriseFieldDefaults(
       if (payload.active === undefined) payload.active = 'true';
       if (!payload.order) payload.order = '100';
       if (!payload.description) {
-        payload.description = `DeepKorce Orchestration Engine Auto-Deployed Business Rule: ${cleanPrompt}`;
+        payload.description = `Now Assist Auto-Deployed Business Rule: ${cleanPrompt}`;
       }
       if (!payload.script) {
-        payload.script = `(function executeRule(current, previous /*null when async*/) {\n    // DeepKorce Orchestration Engine Rule: ${summarySnippet}\n    if (current.isValidRecord()) {\n        gs.info('[DeepKorce Orchestration Engine] Executing rule on ' + current.getTableName() + ' ' + current.getUniqueValue());\n    }\n})(current, previous);`;
+        payload.script = `(function executeRule(current, previous /*null when async*/) {\n    // Now Assist Rule: ${summarySnippet}\n    if (current.isValidRecord()) {\n        gs.info('[Now Assist] Executing rule on ' + current.getTableName() + ' ' + current.getUniqueValue());\n    }\n})(current, previous);`;
       }
       break;
     }
@@ -194,10 +193,10 @@ function applyEnterpriseFieldDefaults(
       if (!payload.access) payload.access = 'all_scopes';
       if (payload.active === undefined) payload.active = 'true';
       if (!payload.description) {
-        payload.description = `DeepKorce Orchestration Engine Script Include helper for: ${cleanPrompt}`;
+        payload.description = `Now Assist Script Include helper for: ${cleanPrompt}`;
       }
       if (!payload.script) {
-        payload.script = `var ${payload.name} = Class.create();\n${payload.name}.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {\n    initialize: function() {\n        this.source = 'DeepKorce Orchestration Engine Autonomous Orchestrator';\n    },\n    executeAction: function() {\n        // Requirement: ${summarySnippet}\n        return JSON.stringify({ status: 'success', timestamp: new GlideDateTime().getDisplayValue() });\n    },\n    type: '${payload.name}'\n});`;
+        payload.script = `var ${payload.name} = Class.create();\n${payload.name}.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {\n    initialize: function() {\n        this.source = 'Now Assist Autonomous Orchestrator';\n    },\n    executeAction: function() {\n        // Requirement: ${summarySnippet}\n        return JSON.stringify({ status: 'success', timestamp: new GlideDateTime().getDisplayValue() });\n    },\n    type: '${payload.name}'\n});`;
       }
       break;
     }
@@ -210,7 +209,7 @@ function applyEnterpriseFieldDefaults(
         payload.short_description = summarySnippet;
       }
       if (!payload.description) {
-        payload.description = `Service Catalog item synthesized by DeepKorce Orchestration Engine.\n${cleanPrompt}`;
+        payload.description = `Service Catalog item synthesized by Now Assist.\n${cleanPrompt}`;
       }
       if (!payload.price) payload.price = '0.00';
       if (payload.active === undefined) payload.active = 'true';
@@ -252,23 +251,8 @@ function applyEnterpriseFieldDefaults(
       }
       if (!payload.state) payload.state = 'in progress';
       if (!payload.description) {
-        payload.description = `Autonomous Update Set container managed by DeepKorce Orchestration Engine for: ${summarySnippet}`;
+        payload.description = `Autonomous Update Set container managed by Now Assist for: ${summarySnippet}`;
       }
-      break;
-    }
-
-    case 'sysevent_email_action': {
-      if (!payload.name) {
-        payload.name = `LAYA_Notification_${Date.now().toString().slice(-4)}`;
-      }
-      if (!payload.collection) payload.collection = 'incident';
-      if (!payload.subject) {
-        payload.subject = `Notification: ${summarySnippet}`;
-      }
-      if (!payload.message_html) {
-        payload.message_html = `<p>Automated notification triggered by DeepKorce Orchestration Engine.</p><p>${cleanPrompt}</p>`;
-      }
-      if (payload.active === undefined) payload.active = 'true';
       break;
     }
 
@@ -349,12 +333,6 @@ function dynamicSemanticResolve(prompt: string, developerName: string): NowAssis
   ) {
     table = 'sys_update_set';
     category = 'Enterprise Governance & Release Management';
-  } else if (
-    lower.includes('email notification') || lower.includes('sysevent_email_action') || lower.includes('notification email') || 
-    lower.includes('send email') || lower.includes('email alert') || lower.includes('notification')
-  ) {
-    table = 'sysevent_email_action';
-    category = 'Platform Notifications & Email Actions';
   } else if (
     lower.includes('problem') || lower.includes('root cause') || lower.includes('known error')
   ) {
@@ -439,7 +417,7 @@ function dynamicSemanticResolve(prompt: string, developerName: string): NowAssis
 }
 
 /**
- * DeepKorce Orchestration Engine Dynamic Natural Language Schema & Entity Resolver.
+ * Now Assist Dynamic Natural Language Schema & Entity Resolver.
  * Uses Gemini for schema inference and entity mapping, with zero hardcoded regex.
  */
 export async function resolveNowAssistIntent(
@@ -450,10 +428,6 @@ export async function resolveNowAssistIntent(
   const dev = developerName || 'System Administrator';
   const cleanDev = dev.replace(/^Dev\s*\d+\s*:\s*/i, '').trim();
 
-  if (geminiQuotaExhausted) {
-    return dynamicSemanticResolve(cleanPrompt, cleanDev);
-  }
-
   const ai = getGeminiClient();
 
   if (ai) {
@@ -462,7 +436,7 @@ export async function resolveNowAssistIntent(
         model: 'gemini-2.5-flash',
         contents: `Analyze this ServiceNow requirement and map to platform schema and enterprise payload: "${cleanPrompt}"`,
         config: {
-          systemInstruction: `You are ServiceNow DeepKorce Orchestration Engine — an enterprise autonomous platform architect.
+          systemInstruction: `You are ServiceNow Now Assist — an enterprise autonomous platform architect.
 Your mission is to dynamically resolve ANY user prompt, user story, or requirement into an executable Table API payload.
 1. Infer the exact target ServiceNow table:
    - User Admin: sys_user, sys_user_group, cmn_department
@@ -499,11 +473,7 @@ Your mission is to dynamically resolve ANY user prompt, user story, or requireme
       });
 
       if (response.text) {
-        let cleanText = response.text.trim();
-        if (cleanText.startsWith('```')) {
-          cleanText = cleanText.replace(/^```[a-z]*\n?/i, '').replace(/```\s*$/, '').trim();
-        }
-        const parsed = JSON.parse(cleanText);
+        const parsed = JSON.parse(response.text);
         if (parsed && parsed.table && parsed.payload) {
           // Enforce strict enterprise defaults on parsed payload
           const safePayload = applyEnterpriseFieldDefaults(parsed.table, parsed.payload, cleanPrompt, cleanDev);
@@ -512,19 +482,17 @@ Your mission is to dynamically resolve ANY user prompt, user story, or requireme
             operation: 'POST',
             payload: safePayload,
             recordSummary: parsed.recordSummary || `${parsed.table.toUpperCase()} - ${cleanPrompt.slice(0, 50)}`,
-            category: parsed.category || 'DeepKorce Orchestration Engine Autonomous Execution',
-            explanation: parsed.explanation || `DeepKorce Orchestration Engine resolved requirement into table [${parsed.table}].`
+            category: parsed.category || 'Now Assist Autonomous Execution',
+            explanation: parsed.explanation || `Now Assist resolved requirement into table [${parsed.table}].`
           };
         }
       }
     } catch (err: any) {
-      if (err?.status === 429 || (err?.message && err.message.includes('429'))) {
-        geminiQuotaExhausted = true;
-      }
+      console.log('[Now Assist Engine] Gemini resolver fallback to semantic analysis:', err?.message);
     }
   }
 
-  // Semantic fallback if Gemini is offline or rate-limited
+  // Semantic fallback if Gemini is offline or slow
   return dynamicSemanticResolve(cleanPrompt, cleanDev);
 }
 
@@ -560,7 +528,7 @@ export async function executeNowAssistAutonomous(params: {
     `US-${cleanDev.replace(/\s+/g, '')}_${targetTable}_${new Date().toISOString().replace(/[-:T]/g, '').slice(0, 8)}`;
 
   if (currentPayload.description) {
-    currentPayload.description += `\n\n[DeepKorce Orchestration Engine Governance - Update Set: ${activeUpdateSetName} | Persona: ${cleanDev}]`;
+    currentPayload.description += `\n\n[Now Assist Governance - Update Set: ${activeUpdateSetName} | Persona: ${cleanDev}]`;
   }
   if (currentPayload.comments && !currentPayload.description) {
     currentPayload.comments += ` [Bound to Update Set: ${activeUpdateSetName} | Requestor: ${cleanDev}]`;
@@ -580,7 +548,7 @@ export async function executeNowAssistAutonomous(params: {
       body: JSON.stringify({
         name: activeUpdateSetName,
         state: 'in progress',
-        description: `DeepKorce Orchestration Engine active container for ${cleanDev}. Auto-governed release package.`
+        description: `Now Assist active container for ${cleanDev}. Auto-governed release package.`
       })
     }).catch(() => {});
   }
