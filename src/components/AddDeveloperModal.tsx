@@ -75,18 +75,7 @@ export const AddDeveloperModal: React.FC<AddDeveloperModalProps> = ({
       author: `${finalName} (${finalRole})`,
       state: 'In progress',
       description: `Dynamic Update Set auto-generated on dev442469 for ${finalName} (${finalRole})`,
-      payloads: [
-        {
-          sysId: `pay-${Date.now()}-1`,
-          name: 'sys_script_include_9281a',
-          targetName: 'IncidentVIPUtils',
-          type: 'sys_script_include',
-          action: 'INSERT_OR_UPDATE',
-          updatedBy: finalName.toLowerCase().replace(/[^a-z0-9]/g, '.'),
-          updatedOn: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          xmlPayloadPreview: `// Auto-generated artifact in ${finalSetName}\nvar IncidentVIPUtils = Class.create();\nIncidentVIPUtils.prototype = {\n    initialize: function() {\n        this._dev = '${finalName}';\n    },\n    isCallerVIP: function(callerSysId) {\n        var gr = new GlideRecordSecure('sys_user');\n        return gr.get(callerSysId) && gr.getValue('vip') == '1';\n    }\n};`,
-        },
-      ],
+      payloads: [],
     };
 
     try {
@@ -154,31 +143,30 @@ export const AddDeveloperModal: React.FC<AddDeveloperModalProps> = ({
             </div>
           )}
 
-          {/* Quick Preset Buttons */}
+          {/* Quick Platform Role Selectors */}
           <div>
             <label className="block text-slate-500 font-bold uppercase text-[10px] mb-1.5">
-              Quick Role Presets
+              Select Platform Role
             </label>
             <div className="flex flex-wrap gap-1.5">
               {[
-                { name: 'Saikiran Veera', role: 'Flow Developer' },
-                { name: 'Neeraja Omtri', role: 'Lead ServiceNow Architect' },
-                { name: 'Krishna Gollakota', role: 'ServiceNow Admin' },
-                { name: 'Aarav Sharma', role: 'ITSM Senior Specialist' },
-                { name: 'Priya Iyer', role: 'Integration Engineer' },
-              ].map((p, idx) => (
+                'Flow Developer',
+                'Lead ServiceNow Architect',
+                'ServiceNow Admin',
+                'ITSM Senior Specialist',
+                'Integration Engineer',
+              ].map((roleOption, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  onClick={() => {
-                    setDevName(p.name);
-                    setDevRole(p.role);
-                    const clean = p.name.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
-                    setCustomSetName(`US-${clean}_${timestampStr}`);
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-900 font-semibold border border-slate-200 hover:border-teal-300 transition-colors cursor-pointer text-[11px]"
+                  onClick={() => setDevRole(roleOption)}
+                  className={`px-2.5 py-1 rounded-lg font-semibold border transition-colors cursor-pointer text-[11px] ${
+                    devRole === roleOption
+                      ? 'bg-teal-600 text-white border-teal-700 shadow-2xs'
+                      : 'bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-900 border-slate-200 hover:border-teal-300'
+                  }`}
                 >
-                  + {p.name} ({p.role.split(' ')[0]})
+                  {roleOption}
                 </button>
               ))}
             </div>
@@ -192,7 +180,7 @@ export const AddDeveloperModal: React.FC<AddDeveloperModalProps> = ({
             <input
               type="text"
               required
-              placeholder="e.g. Saikiran Veera, Neeraja Omtri, Jordan Vance"
+              placeholder="e.g. Alex Chen, Morgan Smith, Jordan Vance"
               value={devName}
               onChange={(e) => {
                 setDevName(e.target.value);

@@ -3,7 +3,7 @@ import { ArchitecturePlan, ArchitectureComponent, DiagramNode, DiagramEdge, Team
 /**
  * Dynamically format an Update Set name based on the selected developer persona
  * and the requirement topic or prompt content.
- * e.g. "US-SaikiranVeera_VIPIncidentEscalation" or "US-NeerajaOmtri_AssetDisposalWorkflow"
+ * e.g. "US-AlexChen_VIPIncidentEscalation" or "US-JordanVance_AssetDisposalWorkflow"
  */
 export function formatDynamicUpdateSetName(
   devName: string,
@@ -49,8 +49,9 @@ export function formatDynamicUpdateSetName(
 export function generateDynamicPlanFromInput(
   rawPrompt: string,
   appScope: string,
-  developer: TeamMember
+  developer?: TeamMember | null
 ): ArchitecturePlan {
+  const devName = developer?.name || 'Administrator';
   const promptLower = rawPrompt.toLowerCase();
   
   let entity = 'Feature';
@@ -195,7 +196,7 @@ ${entity}Utils.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
     processAction: function(recordSysId, actionType) {
         var gr = new GlideRecordSecure('${targetTable}');
         if (gr.get(recordSysId)) {
-            gr.setValue('work_notes', '[LAYA Automated Action] ' + actionType + ' executed by ${developer.name}.');
+            gr.setValue('work_notes', '[LAYA Automated Action] ' + actionType + ' executed by ' + devName + '.');
             gr.update();
             return true;
         }
@@ -275,8 +276,8 @@ ${entity}Utils.prototype = Object.extendsObject(global.AbstractAjaxProcessor, {
     diagramNodes,
     diagramEdges,
     approved: false,
-    assignedDeveloperId: developer.id,
-    targetUpdateSetId: developer.associatedUpdateSetId,
+    assignedDeveloperId: developer?.id || 'dev-default',
+    targetUpdateSetId: developer?.associatedUpdateSetId || 'us-default',
     generatedTimestamp: new Date().toLocaleTimeString()
   };
 }

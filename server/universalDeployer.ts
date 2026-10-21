@@ -16,7 +16,7 @@ export interface ParseResult {
 export function parsePromptToServiceNowIntent(prompt: string, activeDeveloperName?: string): ParseResult {
   const cleanPrompt = prompt.trim();
   const lower = cleanPrompt.toLowerCase();
-  const devName = activeDeveloperName || 'Saikiran Veera';
+  const devName = activeDeveloperName || 'System Administrator';
   const cleanDev = devName.replace(/^Dev\s*\d+\s*:\s*/i, '').trim();
 
   // 1. User Directory / sys_user
@@ -383,7 +383,7 @@ export async function executeUniversalDeployment(params: {
   const username = config.username || 'admin';
   const password = config.password || 'o0JD1cAn*cU+';
 
-  const devName = params.developerName || 'Saikiran Veera';
+  const devName = params.developerName || 'System Administrator';
   const cleanDev = devName.replace(/^Dev\s*\d+\s*:\s*/i, '').trim();
 
   // 1. Parse intent if not explicitly overridden

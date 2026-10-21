@@ -51,6 +51,10 @@ export interface ChatMessage {
 }
 
 export type ActiveTab =
+  | 'home'
+  | 'aiWorkspace'
+  | 'intelligence'
+  | 'admin'
   | 'orchestrator'
   | 'chat'
   | 'instance'

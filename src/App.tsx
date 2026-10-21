@@ -1,201 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Navbar } from './components/Navbar';
-import { EnterpriseOrchestrator } from './components/EnterpriseOrchestrator';
+import { AuthScreen } from './components/AuthScreen';
+import { HomeView } from './components/HomeView';
 import { ChatView } from './components/ChatView';
-import { InstanceConnector } from './components/InstanceConnector';
-import { QueryBuilder } from './components/QueryBuilder';
-import { WidgetStudio } from './components/WidgetStudio';
-import { CodeAuditor } from './components/CodeAuditor';
-import { TokensInspector } from './components/TokensInspector';
-import { ApiReference } from './components/ApiReference';
-import { FlowDesignerBuilder } from './components/FlowDesignerBuilder';
-import { DecisionTableEngine } from './components/DecisionTableEngine';
-import { EmailNotificationStudio } from './components/EmailNotificationStudio';
-import { CatalogItemStudio } from './components/CatalogItemStudio';
-import { UpdateSetManager } from './components/UpdateSetManager';
-import { ActiveTab, ChatMessage, InstanceStatus, TeamMember, IndividualUpdateSet, DeploymentResultCard } from './types';
-import { parsePromptToServiceNowIntent } from './utils/universalIntentParser';
+import { IntelligenceView } from './components/IntelligenceView';
+import { AdminView } from './components/AdminView';
 import { AddDeveloperModal } from './components/AddDeveloperModal';
-
-// Initial Multi-User Developer Profiles
-const INITIAL_DEVELOPERS: TeamMember[] = [
-  {
-    id: 'dev-1',
-    name: 'Saikiran Veera',
-    role: 'Flow Developer',
-    email: 'saikiran.veera@company.com',
-    associatedUpdateSetId: 'us-101',
-    associatedUpdateSetName: 'US-101_Saikiran',
-    avatarColor: 'bg-teal-600',
-    state: 'In progress',
-    personaCode: 'Dev 1',
-  },
-  {
-    id: 'dev-2',
-    name: 'Neeraja Omtri',
-    role: 'Lead ServiceNow Architect',
-    email: 'neeraja.omtri@company.com',
-    associatedUpdateSetId: 'us-102',
-    associatedUpdateSetName: 'US-102_Neeraja',
-    avatarColor: 'bg-indigo-600',
-    state: 'In progress',
-    personaCode: 'Dev 2',
-  },
-  {
-    id: 'dev-3',
-    name: 'Krishna Gollakota',
-    role: 'ServiceNow Admin',
-    email: 'krishna.gollakota@company.com',
-    associatedUpdateSetId: 'us-103',
-    associatedUpdateSetName: 'US-103_Krishna',
-    avatarColor: 'bg-purple-600',
-    state: 'Complete',
-    personaCode: 'Dev 3',
-  },
-];
-
-// Initial Staged Update Sets with Real XML Payload Snippets & Colliding Target Record
-const INITIAL_UPDATE_SETS: IndividualUpdateSet[] = [
-  {
-    id: 'us-101',
-    name: 'US-101_Saikiran',
-    sysId: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
-    author: 'Saikiran Veera (Flow Developer)',
-    state: 'In progress',
-    description: 'VIP Incident Flow Designer triage, decision routing, and base IncidentVIPUtils helper.',
-    payloads: [
-      {
-        sysId: 'pay-101-1',
-        name: 'sys_script_include_9281a',
-        targetName: 'IncidentVIPUtils',
-        type: 'sys_script_include',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'saikiran.veera',
-        updatedOn: '2026-10-18 14:10:00',
-        xmlPayloadPreview: `var IncidentVIPUtils = Class.create();
-IncidentVIPUtils.prototype = {
-    initialize: function() {},
-    // Flow-optimized validation for VIP caller status
-    isCallerVIP: function(callerSysId) {
-        if (!callerSysId) return false;
-        var grUser = new GlideRecord('sys_user');
-        if (grUser.get(callerSysId)) {
-            return grUser.getValue('vip') == '1';
-        }
-        return false;
-    },
-    type: 'IncidentVIPUtils'
-};`
-      },
-      {
-        sysId: 'pay-101-2',
-        name: 'sys_hub_flow_4421a',
-        targetName: 'VIP Incident Intelligent Triage',
-        type: 'sys_hub_flow' as any,
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'saikiran.veera',
-        updatedOn: '2026-10-18 15:30:00',
-        xmlPayloadPreview: `<!-- Flow Designer Trigger on Incident Insert [caller_id.vip == true] -->`
-      }
-    ]
-  },
-  {
-    id: 'us-102',
-    name: 'US-102_Neeraja',
-    sysId: 'b2c3d4e5f60718293a4b5c6d7e8f90a1',
-    author: 'Neeraja Omtri (Lead Architect)',
-    state: 'In progress',
-    description: 'Enterprise caching layer on IncidentVIPUtils and White-Glove client script banner.',
-    payloads: [
-      {
-        sysId: 'pay-102-1',
-        name: 'sys_script_include_9281a',
-        targetName: 'IncidentVIPUtils',
-        type: 'sys_script_include',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'neeraja.omtri',
-        updatedOn: '2026-10-19 09:45:00',
-        xmlPayloadPreview: `var IncidentVIPUtils = Class.create();
-IncidentVIPUtils.prototype = {
-    initialize: function() {
-        // High-performance session caching by Lead Architect
-        this._cache = {};
-    },
-    isCallerVIP: function(callerSysId) {
-        if (!callerSysId) return false;
-        if (this._cache[callerSysId] !== undefined) {
-            return this._cache[callerSysId];
-        }
-        var grUser = new GlideRecordSecure('sys_user');
-        if (grUser.get(callerSysId)) {
-            var isVip = grUser.getValue('vip') == '1';
-            this._cache[callerSysId] = isVip;
-            return isVip;
-        }
-        return false;
-    },
-    type: 'IncidentVIPUtils'
-};`
-      },
-      {
-        sysId: 'pay-102-2',
-        name: 'sys_script_client_1192a',
-        targetName: 'Highlight VIP Caller Banner',
-        type: 'sys_script_client',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'neeraja.omtri',
-        updatedOn: '2026-10-19 11:15:00',
-        xmlPayloadPreview: `function onLoad() {
-    if (g_form.getValue('caller_id.vip') === 'true') {
-        g_form.addInfoMessage('★ White-Glove VIP Support Protocol Engaged.');
-    }
-}`
-      }
-    ]
-  },
-  {
-    id: 'us-103',
-    name: 'US-103_Krishna',
-    sysId: 'c3d4e5f60718293a4b5c6d7e8f90a1b2',
-    author: 'Krishna Gollakota (ServiceNow Admin)',
-    state: 'Complete',
-    description: 'SLA Urgency Calculation Business Rule and Security Access Controls.',
-    payloads: [
-      {
-        sysId: 'pay-103-1',
-        name: 'sys_script_4401a',
-        targetName: 'Calculate SLA Urgency Multiplier',
-        type: 'sys_script',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'krishna.gollakota',
-        updatedOn: '2026-10-17 16:30:00',
-        xmlPayloadPreview: `(function executeRule(current, previous) {
-    if (current.priority == 1 && current.caller_id.vip == true) {
-        current.business_duration = 3600;
-    }
-})(current, previous);`
-      }
-    ]
-  }
-];
+import { ActiveTab, ChatMessage, InstanceStatus, TeamMember, IndividualUpdateSet, DeploymentResultCard } from './types';
+import { Bot, Shield } from 'lucide-react';
 
 const SESSION_STORAGE_KEY = 'laya_now_assist_session_history';
 const TEAM_STORAGE_KEY = 'laya_dynamic_team_roster';
 const ACTIVE_DEV_KEY = 'laya_active_developer_persona';
 const UPDATE_SETS_KEY = 'laya_dynamic_update_sets';
+const AUTH_STORAGE_KEY = 'laya_auth_state';
 
 const loadSavedMessages = (): ChatMessage[] => {
   try {
     const saved = localStorage.getItem(SESSION_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
     }
-  } catch (e) {
-    console.error('Error loading session chat history:', e);
-  }
+  } catch (e) {}
   return [];
 };
 
@@ -204,12 +31,15 @@ const loadSavedTeam = (): TeamMember[] => {
     const saved = localStorage.getItem(TEAM_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) {
+        const filtered = parsed.filter((m: any) => 
+          !['Saikiran Veera', 'Neeraja Omtri', 'Krishna Gollakota'].includes(m.name)
+        );
+        return filtered;
+      }
     }
-  } catch (e) {
-    console.error('Error loading team roster:', e);
-  }
-  return INITIAL_DEVELOPERS;
+  } catch (e) {}
+  return []; // Starts completely empty (0 entries) upon load
 };
 
 const loadSavedUpdateSets = (): IndividualUpdateSet[] => {
@@ -217,82 +47,78 @@ const loadSavedUpdateSets = (): IndividualUpdateSet[] => {
     const saved = localStorage.getItem(UPDATE_SETS_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) {
-    console.error('Error loading update sets:', e);
-  }
-  return INITIAL_UPDATE_SETS;
-};
-
-const loadSavedActiveDev = (team: TeamMember[]): TeamMember => {
-  try {
-    const saved = localStorage.getItem(ACTIVE_DEV_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      const found = team.find(m => m.id === parsed.id);
-      if (found) return found;
+      if (Array.isArray(parsed)) {
+        const filtered = parsed.filter((s: any) => 
+          !['US-101_Saikiran', 'US-102_Neeraja', 'US-103_Krishna'].includes(s.name)
+        );
+        return filtered;
+      }
     }
   } catch (e) {}
-  return team[0] || INITIAL_DEVELOPERS[0];
+  return []; // Starts completely empty (0 entries) upon load
 };
 
 export function App() {
-  const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(AUTH_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [userName, setUserName] = useState<string>('Enterprise Architect');
+  const [userEmail, setUserEmail] = useState<string>('admin@company.com');
+
+  const [activeTab, setActiveTab] = useState<ActiveTab>('home');
   const [serverStatus, setServerStatus] = useState<'online' | 'connecting' | 'offline'>('connecting');
   const [instanceStatus, setInstanceStatus] = useState<InstanceStatus | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(loadSavedMessages);
   const [isLoading, setIsLoading] = useState(false);
   const [isAddDevModalOpen, setIsAddDevModalOpen] = useState(false);
 
-  // Synchronize chat history to localStorage for persistent multi-turn session retention
+  // Impersonation State
+  const [impersonatedDeveloper, setImpersonatedDeveloper] = useState<TeamMember | null>(null);
+
+  // Dynamic Team Roster & Update Sets
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(loadSavedTeam);
+  const [activeDeveloper, setActiveDeveloper] = useState<TeamMember | null>(() => {
+    const team = loadSavedTeam();
+    return team[0] || null;
+  });
+  const [updateSets, setUpdateSets] = useState<IndividualUpdateSet[]>(loadSavedUpdateSets);
+
+  // Persistence effects
+  useEffect(() => {
+    try {
+      localStorage.setItem(AUTH_STORAGE_KEY, isAuthenticated ? 'true' : 'false');
+    } catch {}
+  }, [isAuthenticated]);
+
   useEffect(() => {
     try {
       if (messages.length > 0) {
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(messages));
       }
-    } catch (e) {
-      console.error('Error saving session chat history:', e);
-    }
+    } catch {}
   }, [messages]);
 
-  const handleClearMessages = () => {
-    setMessages([]);
-    try {
-      localStorage.removeItem(SESSION_STORAGE_KEY);
-    } catch (e) {}
-  };
-
-  // Dynamic Multi-User Developer Profiles & Update Sets State
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(loadSavedTeam);
-  const [activeDeveloper, setActiveDeveloper] = useState<TeamMember>(() => loadSavedActiveDev(loadSavedTeam()));
-  const [updateSets, setUpdateSets] = useState<IndividualUpdateSet[]>(loadSavedUpdateSets);
-
-  // Persist dynamic team roster, active developer persona, and update sets
   useEffect(() => {
     try {
       localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(teamMembers));
-    } catch (e) {}
+    } catch {}
   }, [teamMembers]);
 
   useEffect(() => {
     try {
       localStorage.setItem(ACTIVE_DEV_KEY, JSON.stringify(activeDeveloper));
-    } catch (e) {}
+    } catch {}
   }, [activeDeveloper]);
 
   useEffect(() => {
     try {
       localStorage.setItem(UPDATE_SETS_KEY, JSON.stringify(updateSets));
-    } catch (e) {}
+    } catch {}
   }, [updateSets]);
-
-  // Selected table/query for builder cross-navigation
-  const [builderTable, setBuilderTable] = useState<string>('incident');
-  const [builderQuery, setBuilderQuery] = useState<string>('');
-
-  // Script code for auditor cross-navigation
-  const [auditorScript, setAuditorScript] = useState<string>('');
 
   const fetchInstanceStatus = async () => {
     try {
@@ -306,25 +132,33 @@ export function App() {
     }
   };
 
-  // Check health and instance status on mount
   useEffect(() => {
     fetch('/api/health')
       .then((res) => res.json())
       .then((data) => {
-        if (data.status === 'ok') {
-          setServerStatus('online');
-        } else {
-          setServerStatus('offline');
-        }
+        if (data.status === 'ok') setServerStatus('online');
+        else setServerStatus('offline');
       })
-      .catch(() => {
-        setServerStatus('offline');
-      });
+      .catch(() => setServerStatus('offline'));
 
     fetchInstanceStatus();
   }, []);
 
-  // Developer Profile callbacks
+  const handleSignIn = (email: string, name: string) => {
+    setUserName(name);
+    setUserEmail(email);
+    setIsAuthenticated(true);
+    setActiveTab('home');
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setImpersonatedDeveloper(null);
+    try {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch {}
+  };
+
   const handleAddTeamMember = (newMember: TeamMember, newSet: IndividualUpdateSet) => {
     setTeamMembers(prev => [...prev, newMember]);
     setUpdateSets(prev => [newSet, ...prev]);
@@ -333,24 +167,33 @@ export function App() {
 
   const handleUpdateTeamMember = (updatedMember: TeamMember) => {
     setTeamMembers(prev => prev.map(m => m.id === updatedMember.id ? updatedMember : m));
-    if (activeDeveloper.id === updatedMember.id) {
+    if (activeDeveloper?.id === updatedMember.id) {
       setActiveDeveloper(updatedMember);
+    }
+    if (impersonatedDeveloper?.id === updatedMember.id) {
+      setImpersonatedDeveloper(updatedMember);
     }
   };
 
+  const handleImpersonateDeveloper = (member: TeamMember) => {
+    setImpersonatedDeveloper(member);
+    setActiveDeveloper(member);
+    setActiveTab('aiWorkspace');
+  };
+
+  const handleEndImpersonation = () => {
+    setImpersonatedDeveloper(null);
+  };
+
   const handleToggleActiveSetState = () => {
-    if (!activeDeveloper.associatedUpdateSetId) return;
+    if (!activeDeveloper || !activeDeveloper.associatedUpdateSetId) return;
     const targetSetId = activeDeveloper.associatedUpdateSetId;
     const currentSet = updateSets.find(s => s.id === targetSetId);
     if (!currentSet) return;
 
     const nextState = currentSet.state === 'Complete' ? ('In progress' as const) : ('Complete' as const);
     
-    // Update updateSets
-    const updatedSets = updateSets.map(s => s.id === targetSetId ? { ...s, state: nextState } : s);
-    setUpdateSets(updatedSets);
-
-    // Update activeDeveloper
+    setUpdateSets(prev => prev.map(s => s.id === targetSetId ? { ...s, state: nextState } : s));
     const updatedDev = { ...activeDeveloper, state: nextState };
     setActiveDeveloper(updatedDev);
     setTeamMembers(prev => prev.map(m => m.id === updatedDev.id ? updatedDev : m));
@@ -377,10 +220,9 @@ export function App() {
             role: m.role,
             content: m.content,
             deploymentResult: m.deploymentResult,
-            jiraSync: m.jiraSync,
           })),
-          activeDeveloperName: activeDeveloper.name,
-          activeUpdateSetName: activeDeveloper.associatedUpdateSetName,
+          activeDeveloperName: activeDeveloper?.name || 'Administrator',
+          activeUpdateSetName: activeDeveloper?.associatedUpdateSetName || 'US-DEFAULT_Orchestrator',
         }),
       });
 
@@ -393,9 +235,7 @@ export function App() {
           content: data.error || 'Failed to complete autonomous deployment to dev442469.',
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           isError: true,
-          errorType: 'generic',
           deploymentResult: data.deploymentResult,
-          jiraSync: data.jiraSync || data.deploymentResult?.jiraSync,
         };
         setMessages([...newMessages, errorMsg]);
       } else {
@@ -411,21 +251,19 @@ export function App() {
         setMessages([...newMessages, botMsg]);
       }
     } catch (err: any) {
-      const targetUrl = instanceStatus?.instanceUrl || 'https://dev442469.service-now.com';
       const fallbackDeployment: DeploymentResultCard = {
         success: false,
         table: 'incident',
         recordSummary: `Execution error for prompt: "${userText.slice(0, 50)}"`,
-        instanceUrl: targetUrl,
-        error: err?.message || 'Network error connecting to ServiceNow dev442469 deployment endpoint',
+        instanceUrl: 'https://dev442469.service-now.com',
+        error: err?.message || 'Network connection error to ServiceNow dev442469',
       };
       const errorMsg: ChatMessage = {
         id: String(Date.now() + 1),
         role: 'model',
-        content: `### ⚠️ Autonomous Deployment Discrepancy\n\n${err?.message || 'Network connection issue.'} Click **Retry Deployment** below to retry.`,
+        content: `### ⚠️ Autonomous Deployment Discrepancy\n\n${err?.message || 'Network error.'}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isError: true,
-        errorType: 'network',
         deploymentResult: fallbackDeployment,
       };
       setMessages([...newMessages, errorMsg]);
@@ -445,19 +283,38 @@ export function App() {
     }
   };
 
-  const handleOpenQueryInBuilder = (query: string, table: string) => {
-    setBuilderQuery(query);
-    setBuilderTable(table);
-    setActiveTab('queryBuilder');
+  const handleClearMessages = () => {
+    setMessages([]);
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    } catch {}
   };
 
-  const handleAuditScript = (scriptCode: string, scriptTitle: string) => {
-    setAuditorScript(scriptCode);
-    setActiveTab('codeAuditor');
-  };
+  // If not authenticated, show Clean Sign-In Screen
+  if (!isAuthenticated) {
+    return <AuthScreen onSignIn={handleSignIn} />;
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F6F8]">
+    <div className="min-h-screen flex flex-col bg-[#F4F6F8] relative">
+      {/* Impersonation Banner */}
+      {impersonatedDeveloper && (
+        <div className="bg-indigo-900 text-white px-4 py-2.5 text-xs flex items-center justify-between gap-3 border-b border-indigo-700 z-40 sticky top-0 shadow-md">
+          <div className="flex items-center gap-2.5">
+            <Shield className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Impersonating Session:</strong> {impersonatedDeveloper.name} ({impersonatedDeveloper.role}) • Active Container: <code className="font-mono text-indigo-200">{impersonatedDeveloper.associatedUpdateSetName}</code>
+            </span>
+          </div>
+          <button
+            onClick={handleEndImpersonation}
+            className="px-3.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition-colors cursor-pointer shadow-xs"
+          >
+            End Impersonation
+          </button>
+        </div>
+      )}
+
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -468,31 +325,28 @@ export function App() {
         teamMembers={teamMembers}
         onToggleActiveSetState={handleToggleActiveSetState}
         onOpenAddDevModal={() => setIsAddDevModalOpen(true)}
+        onLogout={handleLogout}
       />
 
-      <main className="flex-1">
-        {activeTab === 'orchestrator' && (
-          <EnterpriseOrchestrator
+      <main className="flex-1 pb-16">
+        {activeTab === 'home' && (
+          <HomeView
+            userName={userName}
+            userEmail={userEmail}
+            setActiveTab={setActiveTab}
             instanceStatus={instanceStatus}
             teamMembers={teamMembers}
-            onAddTeamMember={handleAddTeamMember}
-            onUpdateTeamMember={handleUpdateTeamMember}
-            activeDeveloper={activeDeveloper}
-            onSelectDeveloper={setActiveDeveloper}
             updateSets={updateSets}
-            onUpdateSetsChange={setUpdateSets}
-            onAuditScript={handleAuditScript}
-            onNavigateToInstance={() => setActiveTab('instance')}
           />
         )}
-        {activeTab === 'chat' && (
+        {activeTab === 'aiWorkspace' && (
           <ChatView
             messages={messages}
             onSendMessage={handleSendMessage}
             isLoading={isLoading}
             onRetry={handleRetry}
             instanceStatus={instanceStatus}
-            onNavigateToInstance={() => setActiveTab('instance')}
+            onNavigateToInstance={() => setActiveTab('intelligence')}
             onClearMessages={handleClearMessages}
             activeDeveloper={activeDeveloper}
             onSelectDeveloper={setActiveDeveloper}
@@ -501,44 +355,39 @@ export function App() {
             onOpenAddDevModal={() => setIsAddDevModalOpen(true)}
           />
         )}
-        {activeTab === 'instance' && (
-          <InstanceConnector
+        {activeTab === 'intelligence' && (
+          <IntelligenceView
             instanceStatus={instanceStatus}
             onRefreshStatus={fetchInstanceStatus}
-            onOpenQueryInBuilder={handleOpenQueryInBuilder}
-            onAuditScript={handleAuditScript}
+            teamMembers={teamMembers}
+            updateSets={updateSets}
           />
         )}
-        {activeTab === 'flowDesigner' && (
-          <FlowDesignerBuilder
-            onNavigateToDecisionTables={() => setActiveTab('decisionTables')}
-            onAuditScript={handleAuditScript}
+        {activeTab === 'admin' && (
+          <AdminView
+            teamMembers={teamMembers}
+            updateSets={updateSets}
+            activeDeveloper={activeDeveloper}
+            onSelectDeveloper={setActiveDeveloper}
+            onImpersonateDeveloper={handleImpersonateDeveloper}
+            onAddTeamMember={handleAddTeamMember}
+            onToggleActiveSetState={handleToggleActiveSetState}
+            onOpenAddDevModal={() => setIsAddDevModalOpen(true)}
           />
         )}
-        {activeTab === 'decisionTables' && (
-          <DecisionTableEngine onAuditScript={handleAuditScript} />
-        )}
-        {activeTab === 'emailNotifications' && (
-          <EmailNotificationStudio onAuditScript={handleAuditScript} />
-        )}
-        {activeTab === 'catalogStudio' && (
-          <CatalogItemStudio onAuditScript={handleAuditScript} />
-        )}
-        {activeTab === 'updateSetManager' && (
-          <UpdateSetManager onAuditScript={handleAuditScript} />
-        )}
-        {activeTab === 'queryBuilder' && (
-          <QueryBuilder
-            initialTable={builderTable}
-            initialQuery={builderQuery}
-            instanceStatus={instanceStatus}
-          />
-        )}
-        {activeTab === 'widgetStudio' && <WidgetStudio />}
-        {activeTab === 'codeAuditor' && <CodeAuditor initialScript={auditorScript} />}
-        {activeTab === 'tokens' && <TokensInspector />}
-        {activeTab === 'apiRef' && <ApiReference />}
       </main>
+
+      {/* Floating AI Assistant Icon in bottom-right corner */}
+      {activeTab !== 'aiWorkspace' && (
+        <button
+          onClick={() => setActiveTab('aiWorkspace')}
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full bg-gradient-to-tr from-[#0080A3] to-teal-400 text-white shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer ring-4 ring-teal-500/30 group"
+          title="Open AI Workspace"
+        >
+          <Bot className="w-7 h-7 group-hover:rotate-12 transition-transform" />
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white animate-pulse" />
+        </button>
+      )}
 
       <AddDeveloperModal
         isOpen={isAddDevModalOpen}

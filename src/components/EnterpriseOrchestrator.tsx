@@ -55,7 +55,7 @@ interface EnterpriseOrchestratorProps {
   teamMembers: TeamMember[];
   onAddTeamMember: (member: TeamMember, newSet: IndividualUpdateSet) => void;
   onUpdateTeamMember: (updatedMember: TeamMember) => void;
-  activeDeveloper: TeamMember;
+  activeDeveloper: TeamMember | null;
   onSelectDeveloper: (member: TeamMember) => void;
   updateSets: IndividualUpdateSet[];
   onUpdateSetsChange: (sets: IndividualUpdateSet[]) => void;
@@ -352,18 +352,16 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
   const [newDevRole, setNewDevRole] = useState('Flow Developer');
   const [newDevSetName, setNewDevSetName] = useState('');
 
-  // Step 5: Conflict Resolver Selection
-  const [selectedConflictKey, setSelectedConflictKey] = useState<string>('sys_script_include:IncidentVIPUtils');
-  const [conflictWinners, setConflictWinners] = useState<Record<string, string>>({
-    'sys_script_include:IncidentVIPUtils': 'us-sprint-102'
-  });
+  // Step 5: Conflict Resolver Selection (Dynamically computed from session update sets)
+  const [selectedConflictKey, setSelectedConflictKey] = useState<string>('');
+  const [conflictWinners, setConflictWinners] = useState<Record<string, string>>({});
 
   // Step 6: Target Instance Deployment Engine State
   const [targetInstanceUrl, setTargetInstanceUrl] = useState<string>(
     instanceStatus?.instanceUrl || 'https://dev442469.service-now.com'
   );
   const [dynamicUpdateSetName, setDynamicUpdateSetName] = useState<string>(() => {
-    return formatDynamicUpdateSetName(activeDeveloper.name, promptInput || 'VIPIncidentAutoEscalation');
+    return formatDynamicUpdateSetName(activeDeveloper?.name || 'Administrator', promptInput || 'VIPIncidentAutoEscalation');
   });
   const [isInspectingRecord, setIsInspectingRecord] = useState(false);
   const [copiedCommitSysId, setCopiedCommitSysId] = useState<string | null>(null);
@@ -403,7 +401,7 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
         body: JSON.stringify({
           prompt: promptInput,
           activeUpdateSetName: dynamicUpdateSetName,
-          developerName: activeDeveloper.name,
+          developerName: activeDeveloper?.name || 'Administrator',
         }),
       });
       const data = await res.json();
@@ -430,9 +428,9 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
   // Sync dynamic update set name when active developer persona or requirement changes
   useEffect(() => {
     const topic = promptInput || currentPlan?.title || 'Feature';
-    const dynamicName = formatDynamicUpdateSetName(activeDeveloper.name, topic);
+    const dynamicName = formatDynamicUpdateSetName(activeDeveloper?.name || 'Administrator', topic);
     setDynamicUpdateSetName(dynamicName);
-  }, [activeDeveloper.id, activeDeveloper.name, promptInput, currentPlan?.id]);
+  }, [activeDeveloper?.id, activeDeveloper?.name, promptInput, currentPlan?.id]);
 
   // Handle Preset Change
   const handleSelectPreset = (presetKey: 'vip' | 'catalog' | 'custom') => {
@@ -476,6 +474,12 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
 
   // Step 2: "Approve & Generate Update Set" Button Action
   const handleApproveAndGenerateUpdateSet = () => {
+    if (!activeDeveloper) {
+      setIsAddDevModalOpen(true);
+      showToast('Please add a dynamic developer persona first to bind your Update Set.', 'warn');
+      return;
+    }
+
     // Mark plan approved
     setApprovedPlans(prev => ({ ...prev, [currentPlan.id]: true }));
     
@@ -513,7 +517,7 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
       const newDevSet: IndividualUpdateSet = {
         id: targetSetId || `us-${Date.now()}`,
         name: activeFormattedSetName,
-        sysId: 'e' + Math.random().toString(16).substring(2, 34),
+        sysId: 'us' + Math.random().toString(16).substring(2, 32),
         author: `${activeDeveloper.name} (${activeDeveloper.role})`,
         state: 'In progress',
         description: `Generated from AI Architecture Plan: ${currentPlan.title}`,
@@ -562,15 +566,17 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
   // Step 3: Add new team member / developer
   const handleCreateDeveloper = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newDevName) return;
+    if (!newDevName.trim()) return;
 
     const devId = `dev-${Date.now()}`;
     const setId = `us-${Date.now()}`;
-    const setName = newDevSetName || `US-${100 + updateSets.length + 1}_${newDevName.split(' ')[0]}`;
+    const cleanFirst = newDevName.trim().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') || 'Dev';
+    const timestampStr = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+    const setName = newDevSetName.trim() || `US-${cleanFirst}_${timestampStr}`;
 
     const newMember: TeamMember = {
       id: devId,
-      name: newDevName,
+      name: newDevName.trim(),
       role: newDevRole,
       email: `${newDevName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@company.com`,
       associatedUpdateSetId: setId,
@@ -583,22 +589,11 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
     const newSet: IndividualUpdateSet = {
       id: setId,
       name: setName,
-      sysId: 'f' + Math.random().toString(16).substring(2, 34),
-      author: `${newDevName} (${newDevRole})`,
+      sysId: 'us' + Math.random().toString(16).substring(2, 32),
+      author: `${newDevName.trim()} (${newDevRole})`,
       state: 'In progress',
-      description: `Active development work assigned to ${newDevName}`,
-      payloads: [
-        {
-          sysId: `pay-${Date.now()}-init`,
-          name: 'sys_script_include_9281a',
-          targetName: 'IncidentVIPUtils',
-          type: 'sys_script_include',
-          action: 'INSERT_OR_UPDATE',
-          updatedBy: newDevName.toLowerCase().replace(/[^a-z0-9]/g, '.'),
-          updatedOn: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          xmlPayloadPreview: `// Custom VIP Utils by ${newDevName}\nvar IncidentVIPUtils = Class.create();\nIncidentVIPUtils.prototype = {\n    initialize: function() {\n        this._dev = '${newDevName}';\n    },\n    isCallerVIP: function(callerSysId) {\n        // High concurrency validation\n        var gr = new GlideRecordSecure('sys_user');\n        return gr.get(callerSysId) && gr.getValue('vip') == '1';\n    }\n};`
-        }
-      ]
+      description: `Active development work assigned to ${newDevName.trim()}`,
+      payloads: []
     };
 
     onAddTeamMember(newMember, newSet);
@@ -663,7 +658,9 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
 
   // Step 6: Multi-Instance Deployment Engine with Real-Time Progress Bar & Live REST API Call
   const handleDeployAndCommit = async () => {
-    const activeName = dynamicUpdateSetName || formatDynamicUpdateSetName(activeDeveloper.name, promptInput || 'ConsolidatedPackage');
+    const devName = activeDeveloper?.name || 'Administrator';
+    const devRole = activeDeveloper?.role || 'Platform Lead';
+    const activeName = dynamicUpdateSetName || formatDynamicUpdateSetName(devName, promptInput || 'ConsolidatedPackage');
     const shortSummary = (promptInput || currentPlan.title || 'Dynamic Enterprise Requirement').slice(0, 100).replace(/[\r\n]+/g, ' ');
 
     setDeploymentState({
@@ -679,7 +676,7 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
       updateSetName: activeName,
       logs: [
         { timestamp: new Date().toLocaleTimeString(), message: `Deployment pipeline triggered for target instance: ${targetInstanceUrl}`, type: 'info' },
-        { timestamp: new Date().toLocaleTimeString(), message: `[1/4 RUNNING] Parsing Requirement & Schema for persona "${activeDeveloper.name}" (Scope: ${appScope})...`, type: 'info' },
+        { timestamp: new Date().toLocaleTimeString(), message: `[1/4 RUNNING] Parsing Requirement & Schema for persona "${devName}" (Scope: ${appScope})...`, type: 'info' },
         { timestamp: new Date().toLocaleTimeString(), message: `Validating data models, flow triggers, and sys_update_xml integrity...`, type: 'info' }
       ]
     });
@@ -695,7 +692,7 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
         ...prev.logs,
         { timestamp: new Date().toLocaleTimeString(), message: `[1/4 COMPLETE] Schema & requirement parsing successful. Validated ${currentPlan.components.length} architectural components.`, type: 'success' },
         { timestamp: new Date().toLocaleTimeString(), message: `[2/4 RUNNING] Resolving Multi-User Conflicts across ${updateSets.length} developer branches...`, type: 'info' },
-        { timestamp: new Date().toLocaleTimeString(), message: `Active Developer Persona: ${activeDeveloper.name} (${activeDeveloper.role})`, type: 'info' },
+        { timestamp: new Date().toLocaleTimeString(), message: `Active Developer Persona: ${devName} (${devRole})`, type: 'info' },
         { timestamp: new Date().toLocaleTimeString(), message: `Consolidating staged updates: ${updateSets.reduce((sum, s) => sum + s.payloads.length, 0)} customer payloads.`, type: 'info' }
       ]
     }));
@@ -796,7 +793,7 @@ export const EnterpriseOrchestrator: React.FC<EnterpriseOrchestratorProps> = ({
   <sys_created_on>${new Date().toISOString()}</sys_created_on>
   <target_instance>${targetInstanceUrl}</target_instance>
   <application>${appScope}</application>
-  <description>Consolidated release package for ${activeDeveloper.name} merging ${updateSets.length} source update sets across ${teamMembers.length} active developers (${teamMembers.map(m => m.name).join(', ')}).</description>
+  <description>Consolidated release package for ${activeDeveloper?.name || 'Release Administrator'} merging ${updateSets.length} source update sets across ${teamMembers.length} active developers (${teamMembers.map(m => m.name).join(', ')}).</description>
   <total_payloads>${totalPayloads}</totalPayloads>
 </sys_remote_update_set>
 <!-- Staged Customer Updates -->
@@ -865,45 +862,56 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
           </div>
 
           {/* Switcher Dropdown / Pills */}
-          <div className="space-y-1.5">
-            <select
-              value={activeDeveloper.id}
-              onChange={(e) => {
-                const found = teamMembers.find(m => m.id === e.target.value);
-                if (found) {
-                  onSelectDeveloper(found);
-                  showToast(`Switched active persona to ${found.name} (${found.role})`);
-                }
-              }}
-              className="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-400 cursor-pointer"
-            >
-              {teamMembers.map(dev => (
-                <option key={dev.id} value={dev.id}>
-                  {dev.personaCode || 'Dev'}: {dev.name} ({dev.role})
-                </option>
-              ))}
-            </select>
-
-            <div className="flex items-center justify-between text-[11px] pt-1 text-slate-300">
-              <span className="truncate max-w-[170px]" title={activeDeveloper.associatedUpdateSetName}>
-                Set: <strong className="text-teal-200 font-mono">{activeDeveloper.associatedUpdateSetName?.split(':')[0] || 'US-Active'}</strong>
-              </span>
+          {!activeDeveloper ? (
+            <div className="py-2 text-center">
               <button
-                onClick={() => {
-                  if (activeDeveloper.associatedUpdateSetId) {
-                    handleToggleSetState(activeDeveloper.associatedUpdateSetId);
-                  }
-                }}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
-                  activeDeveloper.state === 'Complete'
-                    ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50 hover:bg-emerald-900'
-                    : 'bg-amber-950 text-amber-300 border-amber-500/50 hover:bg-amber-900'
-                }`}
+                onClick={() => setIsAddDevModalOpen(true)}
+                className="w-full py-1.5 px-3 rounded-lg bg-teal-600/30 hover:bg-teal-600/50 border border-teal-400/40 text-teal-200 text-xs font-bold cursor-pointer transition-colors"
               >
-                {activeDeveloper.state === 'Complete' ? '✓ Complete' : '● In Progress'}
+                + Add Dynamic Developer
               </button>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-1.5">
+              <select
+                value={activeDeveloper.id}
+                onChange={(e) => {
+                  const found = teamMembers.find(m => m.id === e.target.value);
+                  if (found) {
+                    onSelectDeveloper(found);
+                    showToast(`Switched active persona to ${found.name} (${found.role})`);
+                  }
+                }}
+                className="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-teal-400 cursor-pointer"
+              >
+                {teamMembers.map(dev => (
+                  <option key={dev.id} value={dev.id}>
+                    {dev.personaCode || 'Dev'}: {dev.name} ({dev.role})
+                  </option>
+                ))}
+              </select>
+
+              <div className="flex items-center justify-between text-[11px] pt-1 text-slate-300">
+                <span className="truncate max-w-[170px]" title={activeDeveloper.associatedUpdateSetName}>
+                  Set: <strong className="text-teal-200 font-mono">{activeDeveloper.associatedUpdateSetName?.split(':')[0] || 'US-Active'}</strong>
+                </span>
+                <button
+                  onClick={() => {
+                    if (activeDeveloper.associatedUpdateSetId) {
+                      handleToggleSetState(activeDeveloper.associatedUpdateSetId);
+                    }
+                  }}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition-colors cursor-pointer ${
+                    activeDeveloper.state === 'Complete'
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-500/50 hover:bg-emerald-900'
+                      : 'bg-amber-950 text-amber-300 border-amber-500/50 hover:bg-amber-900'
+                  }`}
+                >
+                  {activeDeveloper.state === 'Complete' ? '✓ Complete' : '● In Progress'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1135,11 +1143,11 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
               <div className="space-y-2 pt-2 border-t border-slate-800 text-[11px] text-slate-300">
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-                  <span>Target Developer: <strong>{activeDeveloper.name}</strong></span>
+                  <span>Target Developer: <strong>{activeDeveloper?.name || 'Unassigned'}</strong></span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-                  <span>Target Update Set: <strong className="font-mono">{dynamicUpdateSetName || activeDeveloper.associatedUpdateSetName}</strong></span>
+                  <span>Target Update Set: <strong className="font-mono">{dynamicUpdateSetName || activeDeveloper?.associatedUpdateSetName || 'US-Default'}</strong></span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
@@ -1408,7 +1416,7 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
 
                   <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                     <span className="text-slate-500 text-[11px]">
-                      Target Set: <strong className="font-mono text-slate-800">{activeDeveloper.associatedUpdateSetName}</strong>
+                      Target Set: <strong className="font-mono text-slate-800">{activeDeveloper?.associatedUpdateSetName || dynamicUpdateSetName || 'US-Default'}</strong>
                     </span>
                     <button
                       onClick={handleApproveAndGenerateUpdateSet}
@@ -1453,14 +1461,32 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
 
           {/* Developer Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teamMembers.map((member) => {
-              const isActive = activeDeveloper.id === member.id;
-              const devSet = updateSets.find(s => s.id === member.associatedUpdateSetId);
-              return (
-                <div
-                  key={member.id}
-                  className={`p-5 rounded-2xl border-2 transition-all space-y-4 flex flex-col justify-between ${
-                    isActive
+            {teamMembers.length === 0 ? (
+              <div className="col-span-full bg-slate-50 border border-slate-200/80 rounded-2xl p-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-teal-50 text-teal-700 flex items-center justify-center mx-auto border border-teal-200">
+                  <Users className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm">Dynamic Team Roster is Empty (0 Contributors)</h4>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Every developer persona must be manually added live via the interface, automatically generating a unique active Update Set tied to their name and timestamp on dev442469.
+                </p>
+                <button
+                  onClick={() => setIsAddDevModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  <span>+ Add Developer Persona</span>
+                </button>
+              </div>
+            ) : (
+              teamMembers.map((member) => {
+                const isActive = activeDeveloper ? activeDeveloper.id === member.id : false;
+                const devSet = updateSets.find(s => s.id === member.associatedUpdateSetId);
+                return (
+                  <div
+                    key={member.id}
+                    className={`p-5 rounded-2xl border-2 transition-all space-y-4 flex flex-col justify-between ${
+                      isActive
                       ? 'bg-teal-50/70 border-teal-500 shadow-md ring-2 ring-teal-400/40'
                       : 'bg-white border-slate-200 hover:border-slate-300'
                   }`}
@@ -1536,7 +1562,7 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
       )}
@@ -1558,24 +1584,35 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">Active Persona:</span>
               <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 font-bold text-xs border border-teal-200">
-                {activeDeveloper.name} ({activeDeveloper.role})
+                {activeDeveloper ? `${activeDeveloper.name} (${activeDeveloper.role})` : 'No Active Persona'}
               </span>
             </div>
           </div>
 
           {/* Update Sets List with Mark as Complete Toggle */}
           <div className="space-y-4">
-            {updateSets.map((set) => {
-              const isComplete = set.state === 'Complete';
-              const isOwnedByActiveDev = set.id === activeDeveloper.associatedUpdateSetId;
+            {updateSets.length === 0 ? (
+              <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-700 flex items-center justify-center mx-auto border border-indigo-200">
+                  <Layers className="w-6 h-6" />
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm">No Update Sets Staged</h4>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Add a developer in Phase 3 or prompt LAYA in the Now Assist chat to execute deployments bound directly into developer update set containers on dev442469.
+                </p>
+              </div>
+            ) : (
+              updateSets.map((set) => {
+                const isComplete = set.state === 'Complete';
+                const isOwnedByActiveDev = activeDeveloper ? set.id === activeDeveloper.associatedUpdateSetId : false;
 
-              return (
-                <div
-                  key={set.id}
-                  className={`bg-white rounded-2xl border transition-all overflow-hidden shadow-xs ${
-                    isOwnedByActiveDev ? 'border-teal-400 ring-1 ring-teal-300' : 'border-slate-200'
-                  }`}
-                >
+                return (
+                  <div
+                    key={set.id}
+                    className={`bg-white rounded-2xl border transition-all overflow-hidden shadow-xs ${
+                      isOwnedByActiveDev ? 'border-teal-400 ring-1 ring-teal-300' : 'border-slate-200'
+                    }`}
+                  >
                   <div className="p-4 bg-slate-50/70 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-2">
@@ -1665,7 +1702,7 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </div>
       )}
@@ -1862,7 +1899,7 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
               <div>
                 <label className="block text-slate-700 font-bold text-xs mb-1.5 flex items-center justify-between">
                   <span>Target Dynamic Update Set Name</span>
-                  <span className="text-[10px] text-teal-600 font-mono">Persona: {activeDeveloper.name}</span>
+                  <span className="text-[10px] text-teal-600 font-mono">Persona: {activeDeveloper?.name || 'Administrator'}</span>
                 </label>
                 <div className="flex items-center gap-1.5">
                   <input
@@ -1875,7 +1912,7 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
                   <button
                     type="button"
                     onClick={() => {
-                      const fresh = formatDynamicUpdateSetName(activeDeveloper.name, promptInput || currentPlan.title);
+                      const fresh = formatDynamicUpdateSetName(activeDeveloper?.name || 'Administrator', promptInput || currentPlan.title);
                       setDynamicUpdateSetName(fresh);
                       showToast(`Reset to dynamic name: ${fresh}`, 'info');
                     }}
@@ -2120,45 +2157,31 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
             </div>
 
             <form onSubmit={handleCreateDeveloper} className="p-5 space-y-4 text-xs">
-              {/* Presets */}
+              {/* Role Presets */}
               <div>
                 <label className="block text-slate-500 font-bold uppercase text-[10px] mb-1">
-                  Quick Select Developer Presets
+                  Select Platform Role
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewDevName('Saikiran Veera');
-                      setNewDevRole('Flow Developer');
-                      setNewDevSetName('US-104_Saikiran');
-                    }}
-                    className="px-2.5 py-1 rounded bg-teal-50 hover:bg-teal-100 text-teal-700 font-semibold border border-teal-200 cursor-pointer text-[11px]"
-                  >
-                    + Saikiran Veera (Flow Dev)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewDevName('Neeraja Omtri');
-                      setNewDevRole('Lead ServiceNow Architect');
-                      setNewDevSetName('US-102_Neeraja');
-                    }}
-                    className="px-2.5 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold border border-indigo-200 cursor-pointer text-[11px]"
-                  >
-                    + Neeraja Omtri (Lead Architect)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewDevName('Krishna Gollakota');
-                      setNewDevRole('ServiceNow Admin');
-                      setNewDevSetName('US-103_Krishna');
-                    }}
-                    className="px-2.5 py-1 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold border border-purple-200 cursor-pointer text-[11px]"
-                  >
-                    + Krishna Gollakota (Admin)
-                  </button>
+                  {[
+                    'Flow Developer',
+                    'Lead ServiceNow Architect',
+                    'ServiceNow Admin',
+                    'ITSM Specialist',
+                  ].map((roleOpt) => (
+                    <button
+                      key={roleOpt}
+                      type="button"
+                      onClick={() => setNewDevRole(roleOpt)}
+                      className={`px-2.5 py-1 rounded font-semibold border transition-colors cursor-pointer text-[11px] ${
+                        newDevRole === roleOpt
+                          ? 'bg-teal-600 text-white border-teal-700 shadow-2xs'
+                          : 'bg-slate-100 hover:bg-teal-50 text-slate-700 border-slate-200 hover:border-teal-300'
+                      }`}
+                    >
+                      {roleOpt}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -2167,12 +2190,14 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Saikiran Veera, Neeraja Omtri"
+                  placeholder="e.g. Alex Chen, Morgan Smith, Jordan Vance"
                   value={newDevName}
                   onChange={(e) => {
                     setNewDevName(e.target.value);
                     if (!newDevSetName && e.target.value) {
-                      setNewDevSetName(`US-${100 + updateSets.length + 1}_${e.target.value.split(' ')[0]}`);
+                      const cleanFirst = e.target.value.trim().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') || 'Dev';
+                      const timestampStr = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+                      setNewDevSetName(`US-${cleanFirst}_${timestampStr}`);
                     }
                   }}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium text-slate-900"
@@ -2199,7 +2224,7 @@ ${updateSets.map(set => `<!-- Source Set: ${set.name} by ${set.author} -->\n${se
                 <input
                   type="text"
                   required
-                  placeholder="e.g. US-104_Saikiran"
+                  placeholder="e.g. US-Alex_20261020083015"
                   value={newDevSetName}
                   onChange={(e) => setNewDevSetName(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-indigo-950"

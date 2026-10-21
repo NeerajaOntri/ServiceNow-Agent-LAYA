@@ -35,7 +35,7 @@ export function checkAndGenerateJiraSync(params: {
 }): JiraSyncResult | null {
   const { prompt, table, sysId, number, recordName, developerName, priority } = params;
   const lower = prompt.toLowerCase();
-  const cleanDev = (developerName || 'Saikiran Veera').replace(/^Dev\s*\d+\s*:\s*/i, '').trim();
+  const cleanDev = (developerName || 'System Administrator').replace(/^Dev\s*\d+\s*:\s*/i, '').trim();
 
   // Jira trigger keywords or typical development artifacts requiring enterprise tracking
   const hasJiraIntent =

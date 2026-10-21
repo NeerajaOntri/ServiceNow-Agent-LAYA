@@ -425,7 +425,7 @@ export async function resolveNowAssistIntent(
   developerName?: string
 ): Promise<NowAssistResolvedIntent> {
   const cleanPrompt = prompt.trim();
-  const dev = developerName || 'Saikiran Veera';
+  const dev = developerName || 'System Administrator';
   const cleanDev = dev.replace(/^Dev\s*\d+\s*:\s*/i, '').trim();
 
   const ai = getGeminiClient();
@@ -514,7 +514,7 @@ export async function executeNowAssistAutonomous(params: {
   const username = config.username || 'admin';
   const password = config.password || 'o0JD1cAn*cU+';
 
-  const devName = params.developerName || 'Saikiran Veera';
+  const devName = params.developerName || 'System Administrator';
   const cleanDev = devName.replace(/^Dev\s*\d+\s*:\s*/i, '').trim();
 
   // 1. Dynamic Natural Language Schema & Entity Resolver

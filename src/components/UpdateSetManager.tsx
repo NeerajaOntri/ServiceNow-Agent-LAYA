@@ -34,181 +34,51 @@ import { IndividualUpdateSet, UpdateSetPayload, UpdateCollision, TeamMember } fr
 
 interface UpdateSetManagerProps {
   onAuditScript?: (code: string, title: string) => void;
+  teamMembers?: TeamMember[];
+  updateSets?: IndividualUpdateSet[];
+  onAddTeamMember?: (member: TeamMember, newSet: IndividualUpdateSet) => void;
+  onUpdateSetsChange?: (sets: IndividualUpdateSet[]) => void;
 }
 
-const INITIAL_TEAM_MEMBERS: TeamMember[] = [
-  {
-    id: 'tm-1',
-    name: 'Alex Martinez',
-    role: 'Backend Arch',
-    email: 'alex.martinez@company.com',
-    associatedUpdateSetId: 'us-sprint-101',
-    associatedUpdateSetName: 'US-101: VIP Incident Intelligent Flow & UI Action',
-    avatarColor: 'bg-blue-600',
-  },
-  {
-    id: 'tm-2',
-    name: 'Sarah Jenkins',
-    role: 'Frontend Dev',
-    email: 'sarah.jenkins@company.com',
-    associatedUpdateSetId: 'us-sprint-102',
-    associatedUpdateSetName: 'US-102: Incident Form Client Script & Helper Utilities',
-    avatarColor: 'bg-emerald-600',
-  },
-  {
-    id: 'tm-3',
-    name: 'Rajiv Patel',
-    role: 'SRE & ITSM',
-    email: 'rajiv.patel@company.com',
-    associatedUpdateSetId: 'us-sprint-103',
-    associatedUpdateSetName: 'US-103: Hotfix SLA Notification & Priority Matrix',
-    avatarColor: 'bg-purple-600',
-  },
-];
+export const UpdateSetManager: React.FC<UpdateSetManagerProps> = ({ 
+  onAuditScript,
+  teamMembers: propTeamMembers,
+  updateSets: propUpdateSets,
+  onAddTeamMember,
+  onUpdateSetsChange,
+}) => {
+  const [internalUpdateSets, setInternalUpdateSets] = useState<IndividualUpdateSet[]>([]);
+  const [internalTeamMembers, setInternalTeamMembers] = useState<TeamMember[]>([]);
 
-const PRESET_UPDATE_SETS: IndividualUpdateSet[] = [
-  {
-    id: 'us-sprint-101',
-    name: 'US-101: VIP Incident Intelligent Flow & UI Action',
-    sysId: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
-    author: 'Alex Martinez (Backend Arch)',
-    state: 'Complete',
-    description: 'Implements Flow Designer trigger for VIP incidents and adds White-Glove button on Incident form.',
-    payloads: [
-      {
-        sysId: 'pay-1',
-        name: 'sys_script_include_9281a',
-        targetName: 'IncidentVIPUtils',
-        type: 'sys_script_include',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'alex.martinez',
-        updatedOn: '2026-10-12 14:22:00',
-        xmlPayloadPreview: `var IncidentVIPUtils = Class.create();
-IncidentVIPUtils.prototype = {
-    initialize: function() {},
-    isCallerVIP: function(callerSysId) {
-        var grUser = new GlideRecord('sys_user');
-        if (grUser.get(callerSysId)) {
-            return grUser.getValue('vip') == '1';
-        }
-        return false;
-    },
-    type: 'IncidentVIPUtils'
-};`
-      },
-      {
-        sysId: 'pay-2',
-        name: 'sys_ui_action_82194',
-        targetName: 'White Glove Escalation',
-        type: 'sys_ui_action',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'alex.martinez',
-        updatedOn: '2026-10-12 15:40:00',
-        xmlPayloadPreview: `// Client-side UI Action
-function onWhiteGloveClick() {
-    g_form.setValue('priority', '1');
-    g_form.setValue('urgency', '1');
-    g_form.save();
-}`
-      },
-      {
-        sysId: 'pay-3',
-        name: 'sysevent_email_action_5521a',
-        targetName: 'Incident VIP Emergency Notification',
-        type: 'sysevent_email_action',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'alex.martinez',
-        updatedOn: '2026-10-12 16:10:00',
-        xmlPayloadPreview: `<!-- Email action configuration for VIP Escalation -->`
-      }
-    ]
-  },
-  {
-    id: 'us-sprint-102',
-    name: 'US-102: Incident Form Client Script & Helper Utilities',
-    sysId: 'b2c3d4e5f60718293a4b5c6d7e8f90a1',
-    author: 'Sarah Jenkins (Frontend Dev)',
-    state: 'Complete',
-    description: 'Form client scripts and modified IncidentVIPUtils with caching enhancements.',
-    payloads: [
-      {
-        sysId: 'pay-4',
-        name: 'sys_script_include_9281a',
-        targetName: 'IncidentVIPUtils',
-        type: 'sys_script_include',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'sarah.jenkins',
-        updatedOn: '2026-10-13 11:05:00',
-        xmlPayloadPreview: `var IncidentVIPUtils = Class.create();
-IncidentVIPUtils.prototype = {
-    initialize: function() {
-        this._cache = {};
-    },
-    isCallerVIP: function(callerSysId) {
-        if (this._cache[callerSysId] !== undefined) {
-            return this._cache[callerSysId];
-        }
-        var grUser = new GlideRecordSecure('sys_user');
-        if (grUser.get(callerSysId)) {
-            var isVip = grUser.getValue('vip') == '1';
-            this._cache[callerSysId] = isVip;
-            return isVip;
-        }
-        return false;
-    },
-    type: 'IncidentVIPUtils'
-};`
-      },
-      {
-        sysId: 'pay-5',
-        name: 'sys_script_client_1192a',
-        targetName: 'Highlight VIP Caller Banner',
-        type: 'sys_script_client',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'sarah.jenkins',
-        updatedOn: '2026-10-13 13:30:00',
-        xmlPayloadPreview: `function onLoad() {
-    if (g_form.getValue('caller_id.vip') === 'true') {
-        g_form.addInfoMessage('★ High Profile VIP Caller Attached to this Incident.');
-    }
-}`
-      }
-    ]
-  },
-  {
-    id: 'us-sprint-103',
-    name: 'US-103: Hotfix SLA Notification & Priority Matrix',
-    sysId: 'c3d4e5f60718293a4b5c6d7e8f90a1b2',
-    author: 'Rajiv Patel (SRE & ITSM)',
-    state: 'Complete',
-    description: 'Adjusts SLA response duration and notification triggers.',
-    payloads: [
-      {
-        sysId: 'pay-6',
-        name: 'sys_script_4401a',
-        targetName: 'Calculate SLA Urgency Multiplier',
-        type: 'sys_script',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: 'rajiv.patel',
-        updatedOn: '2026-10-13 17:15:00',
-        xmlPayloadPreview: `(function executeRule(current, previous) {
-    if (current.priority == 1 && current.caller_id.vip == true) {
-        current.business_duration = 3600;
-    }
-})(current, previous);`
-      }
-    ]
-  }
-];
+  // Prefer passed props if supplied
+  const updateSets = propUpdateSets !== undefined ? propUpdateSets : internalUpdateSets;
+  const teamMembers = propTeamMembers !== undefined ? propTeamMembers : internalTeamMembers;
 
-export const UpdateSetManager: React.FC<UpdateSetManagerProps> = ({ onAuditScript }) => {
-  const [updateSets, setUpdateSets] = useState<IndividualUpdateSet[]>(PRESET_UPDATE_SETS);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(INITIAL_TEAM_MEMBERS);
-  const [releasePackageName, setReleasePackageName] = useState('Release_2026_Sprint_14_Consolidated');
-  const [releaseDescription, setReleaseDescription] = useState('Consolidated release package merging multi-developer update sets for production deployment.');
+  const setUpdateSets = (newSets: IndividualUpdateSet[] | ((prev: IndividualUpdateSet[]) => IndividualUpdateSet[])) => {
+    if (typeof newSets === 'function') {
+      const updated = newSets(updateSets);
+      if (onUpdateSetsChange) onUpdateSetsChange(updated);
+      setInternalUpdateSets(updated);
+    } else {
+      if (onUpdateSetsChange) onUpdateSetsChange(newSets);
+      setInternalUpdateSets(newSets);
+    }
+  };
+
+  const setTeamMembers = (newMembers: TeamMember[] | ((prev: TeamMember[]) => TeamMember[])) => {
+    if (typeof newMembers === 'function') {
+      const updated = newMembers(teamMembers);
+      setInternalTeamMembers(updated);
+    } else {
+      setInternalTeamMembers(newMembers);
+    }
+  };
+
+  const [releasePackageName, setReleasePackageName] = useState('Release_Consolidated_Package');
+  const [releaseDescription, setReleaseDescription] = useState('Consolidated release package merging multi-developer update sets on dev442469.');
   const [targetInstance, setTargetInstance] = useState('https://dev442469.service-now.com');
-  const [selectedConflictKey, setSelectedConflictKey] = useState<string | null>('sys_script_include:IncidentVIPUtils');
-  const [activeTab, setActiveTab] = useState<'merger' | 'conflicts' | 'script' | 'xmlPreview'>('conflicts');
+  const [selectedConflictKey, setSelectedConflictKey] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'merger' | 'conflicts' | 'script' | 'xmlPreview'>('merger');
   const [copied, setCopied] = useState(false);
   const [statusToast, setStatusToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
 
@@ -224,10 +94,8 @@ export const UpdateSetManager: React.FC<UpdateSetManagerProps> = ({ onAuditScrip
   const [includeCollision, setIncludeCollision] = useState(true);
   const [collisionTarget, setCollisionTarget] = useState<'IncidentVIPUtils' | 'Calculate SLA Urgency Multiplier'>('IncidentVIPUtils');
 
-  // Resolution choices per collisionKey
-  const [resolutionPicks, setResolutionPicks] = useState<Record<string, string>>({
-    'sys_script_include:IncidentVIPUtils': 'us-sprint-102' // Defaults to latest
-  });
+  // Resolution choices per collisionKey (dynamically populated when overlapping updates occur)
+  const [resolutionPicks, setResolutionPicks] = useState<Record<string, string>>({});
 
   const showToast = (message: string, type: 'success' | 'info' = 'success') => {
     setStatusToast({ message, type });
@@ -312,154 +180,36 @@ export const UpdateSetManager: React.FC<UpdateSetManagerProps> = ({ onAuditScrip
   };
 
   // Generate mock payloads for new team member / developer
+  // Start with empty payloads for new dynamic developers (zero hardcoded mock stubs)
   const generateDeveloperPayloads = (
-    name: string, 
-    role: string, 
-    setName: string, 
-    shouldCollide: boolean
+    _name: string, 
+    _role: string, 
+    _setName: string, 
+    _shouldCollide: boolean
   ): UpdateSetPayload[] => {
-    const userHandle = name.toLowerCase().replace(/[^a-z0-9]/g, '.');
-    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 19);
-    const payloads: UpdateSetPayload[] = [];
-
-    if (shouldCollide) {
-      if (collisionTarget === 'IncidentVIPUtils') {
-        payloads.push({
-          sysId: `pay-${Date.now()}-1`,
-          name: 'sys_script_include_9281a',
-          targetName: 'IncidentVIPUtils',
-          type: 'sys_script_include',
-          action: 'INSERT_OR_UPDATE',
-          updatedBy: userHandle,
-          updatedOn: timestamp,
-          xmlPayloadPreview: `var IncidentVIPUtils = Class.create();
-IncidentVIPUtils.prototype = {
-    initialize: function() {
-        // Architecture overhaul by ${name} (${role})
-        // Integrated with Flow Designer engine & GlideScriptCache
-        this.cacheManager = new GlideScriptCache('vip_incident_store');
-        this.flowApi = sn_fd.FlowAPI;
-    },
-    isCallerVIP: function(callerSysId) {
-        if (!callerSysId) return false;
-        var inMemory = this.cacheManager.get(callerSysId);
-        if (inMemory !== null) return inMemory === 'true';
-
-        var grUser = new GlideRecordSecure('sys_user');
-        if (grUser.get(callerSysId)) {
-            var isVip = grUser.getValue('vip') == '1';
-            this.cacheManager.put(callerSysId, '' + isVip, 600);
-            if (isVip) {
-                this.dispatchVIPHandling(callerSysId);
-            }
-            return isVip;
-        }
-        return false;
-    },
-    dispatchVIPHandling: function(callerSysId) {
-        gs.info('[${name}] Dispatched expedited VIP queue for caller: ' + callerSysId);
-    },
-    type: 'IncidentVIPUtils'
-};`
-        });
-      } else {
-        payloads.push({
-          sysId: `pay-${Date.now()}-1`,
-          name: 'sys_script_4401a',
-          targetName: 'Calculate SLA Urgency Multiplier',
-          type: 'sys_script',
-          action: 'INSERT_OR_UPDATE',
-          updatedBy: userHandle,
-          updatedOn: timestamp,
-          xmlPayloadPreview: `(function executeRule(current, previous) {
-    // Dynamic multiplier calculation by ${name} (${role})
-    if (current.priority == 1 && current.caller_id.vip == true) {
-        current.business_duration = 1800; // 30 min critical SLA
-        gs.addInfoMessage('[${name}] Executive Priority SLA multiplier engaged.');
-    }
-})(current, previous);`
-        });
-      }
-    }
-
-    // Role-specific secondary payload
-    if (role.toLowerCase().includes('flow')) {
-      payloads.push({
-        sysId: `pay-${Date.now()}-2`,
-        name: 'sys_hub_flow_3391b',
-        targetName: 'VIP Rapid Triage & Subflow Runner',
-        type: 'sys_script',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: userHandle,
-        updatedOn: timestamp,
-        xmlPayloadPreview: `// Flow Action Trigger Script by ${name} (${role})
-(function executeSubflowTrigger(current, previous) {
-    if (current.priority == 1 && current.caller_id.vip == true) {
-        var inputs = {};
-        inputs['incident_record'] = current;
-        inputs['urgency_threshold'] = 1;
-        sn_fd.FlowAPI.getRunner().subflow('global.vip_rapid_triage').inBackground().withInputs(inputs).run();
-    }
-})(current, previous);`
-      });
-    } else if (role.toLowerCase().includes('admin')) {
-      payloads.push({
-        sysId: `pay-${Date.now()}-2`,
-        name: 'sys_decision_multi_approver_812',
-        targetName: 'Executive Escalation Decision Table Matrix',
-        type: 'sys_script',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: userHandle,
-        updatedOn: timestamp,
-        xmlPayloadPreview: `// Decision Table execution by ${name} (${role})
-var dt = new sn_dt.DecisionTableAPI();
-var inputs = new Object();
-inputs['u_priority'] = current.getValue('priority');
-inputs['u_caller_vip'] = current.caller_id.vip.toString();
-var decision = dt.getDecision('executive_escalation_rules', inputs);
-if (decision) {
-    current.assignment_group = decision.u_approval_group;
-}`
-      });
-    } else {
-      payloads.push({
-        sysId: `pay-${Date.now()}-2`,
-        name: 'sys_ui_action_custom_dev',
-        targetName: `${role} Custom Escalation Action`,
-        type: 'sys_ui_action',
-        action: 'INSERT_OR_UPDATE',
-        updatedBy: userHandle,
-        updatedOn: timestamp,
-        xmlPayloadPreview: `function onCustomEscalate() {
-    g_form.addInfoMessage('Escalation routine triggered by ${name} (${role}).');
-    g_form.setValue('state', '2'); // In Progress
-    g_form.save();
-}`
-      });
-    }
-
-    return payloads;
+    return [];
   };
 
   const handleAddDeveloperSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalName = devName.trim() || 'New Developer';
     const finalRole = devRole.trim() || 'ServiceNow Developer';
-    const finalSetName = devUpdateSetName.trim() || `US-${100 + updateSets.length + 1}: ${finalRole} Updates by ${finalName.split(' ')[0]}`;
-    const finalDesc = devDescription.trim() || `Contributed by ${finalName} (${finalRole}) for release package.`;
+    const cleanFirst = finalName.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') || 'Dev';
+    const timestampStr = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+    const finalSetName = devUpdateSetName.trim() || `US-${cleanFirst}_${timestampStr}`;
+    const finalDesc = devDescription.trim() || `Active development container dynamically auto-generated for ${finalName} (${finalRole}) on dev442469.`;
 
-    const newSetId = `us-dev-${Date.now()}`;
-    const newSysId = 'e' + Math.random().toString(16).substring(2, 34);
-    const mockPayloads = generateDeveloperPayloads(finalName, finalRole, finalSetName, includeCollision);
+    const newSetId = `us-${Date.now()}`;
+    const newSysId = 'us' + Math.random().toString(16).substring(2, 32);
 
     const newUpdateSet: IndividualUpdateSet = {
       id: newSetId,
       name: finalSetName,
       sysId: newSysId,
       author: `${finalName} (${finalRole})`,
-      state: 'Complete',
+      state: 'In progress',
       description: finalDesc,
-      payloads: mockPayloads
+      payloads: []
     };
 
     const newMemberId = `tm-${Date.now()}`;
@@ -477,16 +227,11 @@ if (decision) {
     // Dynamically append to state
     setUpdateSets(prev => [...prev, newUpdateSet]);
     setTeamMembers(prev => [...prev, newTeamMember]);
-
-    // If collision included, ensure conflict tab highlights the collision
-    if (includeCollision) {
-      const collisionKey = `${mockPayloads[0].type}:${mockPayloads[0].targetName}`;
-      setSelectedConflictKey(collisionKey);
-      setActiveTab('conflicts');
-      showToast(`Added ${finalName} & "${finalSetName}"! Overlap detected with ${mockPayloads[0].targetName}.`);
-    } else {
-      showToast(`Added ${finalName} & "${finalSetName}" with ${mockPayloads.length} XML payloads.`);
+    if (onAddTeamMember) {
+      onAddTeamMember(newTeamMember, newUpdateSet);
     }
+
+    showToast(`Added developer ${finalName} & active Update Set "${finalSetName}" on dev442469.`);
 
     // Reset and close
     setDevName('');
@@ -636,34 +381,11 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
           </button>
 
           <button
-            onClick={() => {
-              const newSet: IndividualUpdateSet = {
-                id: `us-${Date.now()}`,
-                name: `US-${100 + updateSets.length + 1}: Developer Hotfix`,
-                sysId: 'd' + Math.random().toString(16).substring(2, 34),
-                author: 'System Admin',
-                state: 'Complete',
-                description: 'Custom updates staged by administrator',
-                payloads: [
-                  {
-                    sysId: `pay-${Date.now()}`,
-                    name: 'sys_script_custom',
-                    targetName: 'Custom Business Rule',
-                    type: 'sys_script',
-                    action: 'INSERT_OR_UPDATE',
-                    updatedBy: 'admin',
-                    updatedOn: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                    xmlPayloadPreview: '// Business Rule payload staged for deployment'
-                  }
-                ]
-              };
-              setUpdateSets([...updateSets, newSet]);
-              showToast(`Added quick update set: ${newSet.name}`);
-            }}
+            onClick={() => setIsAddMemberModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-500/30 hover:bg-indigo-500/50 text-indigo-100 transition-colors cursor-pointer border border-indigo-400/30"
           >
-            <Plus className="w-4 h-4" />
-            Quick Update Set
+            <UserPlus className="w-4 h-4" />
+            + Add Developer & Update Set
           </button>
         </div>
       </div>
@@ -700,41 +422,48 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
 
             {/* List of team members */}
             <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-              {teamMembers.map(member => (
-                <div 
-                  key={member.id}
-                  className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/70 transition-colors text-xs"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={`w-7 h-7 rounded-full ${member.avatarColor || 'bg-slate-600'} text-white flex items-center justify-center font-bold text-[11px] shrink-0`}>
-                      {member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-bold text-slate-900 truncate">{member.name}</p>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50/90 px-1.5 py-0.2 rounded border border-indigo-100 truncate max-w-[120px]">
-                          {member.role}
-                        </span>
+              {teamMembers.length === 0 ? (
+                <div className="py-6 px-3 text-center rounded-xl bg-slate-50 border border-slate-200/60 text-slate-400 text-xs space-y-1.5">
+                  <p className="font-semibold text-slate-600">Team roster starts empty (0 contributors)</p>
+                  <p className="text-[11px] text-slate-400">Click "+ Add" to dynamically register a developer and their active Update Set.</p>
+                </div>
+              ) : (
+                teamMembers.map(member => (
+                  <div 
+                    key={member.id}
+                    className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/70 transition-colors text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`w-7 h-7 rounded-full ${member.avatarColor || 'bg-slate-600'} text-white flex items-center justify-center font-bold text-[11px] shrink-0`}>
+                        {member.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 truncate">{member.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-semibold text-indigo-700 bg-indigo-50/90 px-1.5 py-0.2 rounded border border-indigo-100 truncate max-w-[120px]">
+                            {member.role}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-1 shrink-0">
-                    {member.associatedUpdateSetName && (
-                      <span className="text-[9px] font-mono text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200" title={member.associatedUpdateSetName}>
-                        {member.associatedUpdateSetName.split(':')[0]}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => handleRemoveTeamMember(member.id)}
-                      className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 cursor-pointer"
-                      title="Remove Member"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {member.associatedUpdateSetName && (
+                        <span className="text-[9px] font-mono text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200" title={member.associatedUpdateSetName}>
+                          {member.associatedUpdateSetName.split(':')[0]}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => handleRemoveTeamMember(member.id)}
+                        className="p-1 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 cursor-pointer"
+                        title="Remove Member"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -785,7 +514,12 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
             </div>
 
             <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-              {updateSets.map(set => {
+              {updateSets.length === 0 ? (
+                <div className="py-8 px-4 text-center rounded-xl bg-slate-50 border border-slate-200/60 text-slate-400 text-xs space-y-1.5">
+                  <p className="font-semibold text-slate-600">No source update sets staged</p>
+                  <p className="text-[11px] text-slate-400">Add developers or deploy artifacts to begin tracking.</p>
+                </div>
+              ) : updateSets.map(set => {
                 // Check if this set participates in any detected collision
                 const hasCollision = collisions.some(c => c.collidingSets.some(item => item.setId === set.id));
                 
@@ -1177,48 +911,32 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
 
             {/* Modal Form */}
             <form onSubmit={handleAddDeveloperSubmit} className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
-              {/* Quick Fill Presets */}
+              {/* Role Selectors */}
               <div>
                 <label className="block text-slate-600 mb-1.5 font-bold uppercase tracking-wider text-[10px]">
-                  Quick Fill Developer Presets
+                  Select Platform Role
                 </label>
                 <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => applyPreset(
-                      'Saikiran Veera', 
-                      'Flow Developer', 
-                      'US-104: Custom Flow Designer Updates',
-                      'Implements Flow Designer triggers and decision table routing for VIP caller incidents.'
-                    )}
-                    className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold border border-indigo-200 cursor-pointer text-[11px] transition-colors"
-                  >
-                    + Saikiran Veera (Flow Dev)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyPreset(
-                      'Krishna Gollakota', 
-                      'ServiceNow Admin', 
-                      'US-105: Security & Decision Table Engine',
-                      'Enterprise decision logic rules and security group routing.'
-                    )}
-                    className="px-2.5 py-1 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 font-semibold border border-teal-200 cursor-pointer text-[11px] transition-colors"
-                  >
-                    + Krishna Gollakota (Admin)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => applyPreset(
-                      'Priya Sharma', 
-                      'Technical Architect', 
-                      'US-106: Microservice Architecture & API Hook',
-                      'High-throughput caching integration and webhook event queue.'
-                    )}
-                    className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold border border-purple-200 cursor-pointer text-[11px] transition-colors"
-                  >
-                    + Priya Sharma (Architect)
-                  </button>
+                  {[
+                    'Flow Developer',
+                    'Lead ServiceNow Architect',
+                    'ServiceNow Admin',
+                    'ITSM Specialist',
+                    'Integration Engineer',
+                  ].map((roleOpt) => (
+                    <button
+                      key={roleOpt}
+                      type="button"
+                      onClick={() => setDevRole(roleOpt)}
+                      className={`px-2.5 py-1 rounded-lg font-semibold border transition-colors cursor-pointer text-[11px] ${
+                        devRole === roleOpt
+                          ? 'bg-indigo-600 text-white border-indigo-700 shadow-2xs'
+                          : 'bg-slate-100 hover:bg-indigo-50 text-slate-700 border-slate-200 hover:border-indigo-300'
+                      }`}
+                    >
+                      {roleOpt}
+                    </button>
+                  ))}
                 </div>
               </div>
 
@@ -1230,12 +948,14 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Saikiran Veera, Krishna Gollakota"
+                  placeholder="e.g. Alex Chen, Morgan Smith, Jordan Vance"
                   value={devName}
                   onChange={(e) => {
                     setDevName(e.target.value);
                     if (!devUpdateSetName && e.target.value) {
-                      setDevUpdateSetName(`US-${100 + updateSets.length + 1}: ${devRole} Updates by ${e.target.value.split(' ')[0]}`);
+                      const clean = e.target.value.split(' ')[0].replace(/[^a-zA-Z0-9]/g, '') || 'Dev';
+                      const timestampStr = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+                      setDevUpdateSetName(`US-${clean}_${timestampStr}`);
                     }
                   }}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-900 font-medium"
@@ -1252,15 +972,12 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
                     value={devRole}
                     onChange={(e) => {
                       setDevRole(e.target.value);
-                      if (devName && (!devUpdateSetName || devUpdateSetName.startsWith('US-'))) {
-                        setDevUpdateSetName(`US-${100 + updateSets.length + 1}: ${e.target.value} Updates`);
-                      }
                     }}
                     className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white text-slate-900 font-medium cursor-pointer"
                   >
-                    <option value="ServiceNow Admin">ServiceNow Admin</option>
+                    <option value="Lead ServiceNow Architect">Lead ServiceNow Architect</option>
                     <option value="Flow Developer">Flow Developer</option>
-                    <option value="Technical Architect">Technical Architect</option>
+                    <option value="ServiceNow Admin">ServiceNow Admin</option>
                     <option value="ITSM Specialist">ITSM Specialist</option>
                     <option value="Frontend Developer">Frontend Developer</option>
                     <option value="Integration Engineer">Integration Engineer</option>
@@ -1269,11 +986,11 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
 
                 <div>
                   <label className="block text-slate-700 font-bold mb-1">
-                    Work Email (Optional)
+                    Work Email (Auto-Generated)
                   </label>
                   <input
                     type="email"
-                    placeholder="e.g. saikiran@company.com"
+                    placeholder="e.g. alex.chen@company.com"
                     value={devName ? `${devName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@company.com` : ''}
                     readOnly
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 font-mono text-[11px]"
@@ -1289,7 +1006,7 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
                 <input
                   type="text"
                   required
-                  placeholder="e.g. US-104: Custom Flow Designer Updates"
+                  placeholder="e.g. US-Alex_20261020083015"
                   value={devUpdateSetName}
                   onChange={(e) => setDevUpdateSetName(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-slate-900 font-semibold"
@@ -1310,39 +1027,15 @@ ${updateSets.flatMap(s => s.payloads).map(p => `  <sys_update_xml action="INSERT
                 />
               </div>
 
-              {/* Collision Resolver Participation Box */}
-              <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/90 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer font-bold text-amber-950">
-                    <input
-                      type="checkbox"
-                      checked={includeCollision}
-                      onChange={(e) => setIncludeCollision(e.target.checked)}
-                      className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 accent-indigo-600 cursor-pointer"
-                    />
-                    <span>Participate in Collision & Conflict Resolver</span>
-                  </label>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
-                    Interactive Merge
-                  </span>
+              {/* Dynamic Update Set Note */}
+              <div className="p-3.5 rounded-xl bg-indigo-50/80 border border-indigo-200/90 space-y-1.5">
+                <div className="flex items-center gap-2 text-indigo-950 font-bold text-xs">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>Dynamic Update Set Container</span>
                 </div>
-                <p className="text-[11px] text-amber-900/90 leading-relaxed pl-6">
-                  Automatically stages a mock ServiceNow XML payload targeting <code className="font-mono font-bold text-amber-950 bg-amber-100 px-1 py-0.5 rounded">IncidentVIPUtils</code> so this developer's Update Set will actively participate alongside Alex Martinez & Sarah Jenkins in the side-by-side conflict resolution matrix.
+                <p className="text-[11px] text-indigo-900/90 leading-relaxed">
+                  Creates an isolated Update Set container bound to this developer persona on dev442469. Overlapping modifications on identical artifacts (same table and target name) during live sessions will automatically populate the Conflict Resolver.
                 </p>
-
-                {includeCollision && (
-                  <div className="pl-6 pt-1 flex items-center gap-2">
-                    <span className="text-[10px] text-amber-900 font-medium">Colliding Target:</span>
-                    <select
-                      value={collisionTarget}
-                      onChange={(e) => setCollisionTarget(e.target.value as any)}
-                      className="text-[11px] font-mono px-2 py-1 rounded-lg border border-amber-300 bg-white text-slate-800 font-semibold cursor-pointer"
-                    >
-                      <option value="IncidentVIPUtils">sys_script_include: IncidentVIPUtils</option>
-                      <option value="Calculate SLA Urgency Multiplier">sys_script: Calculate SLA Urgency Multiplier</option>
-                    </select>
-                  </div>
-                )}
               </div>
 
               {/* Footer Actions */}

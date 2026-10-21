@@ -70,9 +70,9 @@ pages, service portal widgets, and workspaces — not generic web apps.
 ### 8. Enterprise Orchestration, Update Set Merger & Multi-Instance Deployment (sys_update_set & sys_update_xml)
 - BRD & User Story Intake: Translating complex business requirement documents (BRD) and user stories into technical ServiceNow architecture plans and data models.
 - Technical Architecture Diagrams & Plans: Formulating interactive component maps spanning Tables (sys_db_object), Flow Designer flows (sys_hub_flow), Decision Tables (sys_decision), Catalog Items (sc_cat_item), Client Scripts, Business Rules, and Notifications prior to code staging.
-- Multi-User Developer Profiles: Segregating changes across active developer personas (Dev 1, Dev 2, Dev 3) each maintaining distinct active Update Sets (e.g. US-101_Saikiran, US-102_Neeraja).
+- Multi-User Developer Profiles: Segregating changes across active developer personas (Dev 1, Dev 2, Dev 3) each maintaining distinct active Update Sets (e.g. US-[DeveloperName]_[Timestamp]).
 - Configuration Tracking & Lifecycle: Automatically tagging generated XML payloads into the active developer's Update Set, supporting "Mark as Complete" (sys_update_set.state = 'complete') to freeze updates for release.
-- Collision Detection & Code Diff Resolution: Detecting concurrent developer modifications on identical platform artifacts (same type and target_name, e.g. IncidentVIPUtils), providing side-by-side visual code diffs, and selecting winning implementations for consolidated release packaging.
+- Collision Detection & Code Diff Resolution: Detecting concurrent developer modifications on identical platform artifacts (same type and target_name), providing side-by-side visual code diffs, and selecting winning implementations for consolidated release packaging.
 - Multi-Instance Deployment Engine: Executing multi-stage automated deployment pipelines ([1/4] Parsing Prompt -> [2/4] Generating Schema -> [3/4] Resolving Conflicts -> [4/4] Deployed to Instance dev442469), live console logs, and exporting remote update set XML (sys_remote_update_set).
 
 ### 9. Integrations & REST APIs
